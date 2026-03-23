@@ -112,7 +112,7 @@ public protocol BindifyStoreState: BindifyState {}
 ///
 /// - ``BindifyState``
 /// - ``BindifyStoreState``
-public protocol BindifyViewState: BindifyState, Sendable {
+public protocol BindifyViewState: BindifyState {
     /// Creates an empty state instance.
     ///
     /// This initializer is required to support state initialization before
@@ -205,11 +205,11 @@ public struct BindifyStateChange<State: BindifyState>: Equatable, Sendable {
   public var hasChanged: Bool { oldState != newState }
 }
 
-public struct BindifyStateSideEffect<State: BindifyState> {
+public struct BindifyStateSideEffect<State: BindifyState>: Sendable {
   let change: BindifyStateChange<State>
 
   @MainActor
-  public func sideEffect(_ block: @escaping @MainActor (BindifyStateChange<State>) async -> Void) async -> Void {
+  public func then(_ block: @escaping @MainActor (BindifyStateChange<State>) async -> Void) async -> Void {
     await block(change)
   }
 }
