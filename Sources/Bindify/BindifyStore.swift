@@ -95,16 +95,11 @@ extension BindifyStore {
   ///
   /// - Parameter updates: A closure that receives the old and new state. The old state will be `nil` for the initial update.
   /// - Returns: A cancellable subscription object that should be retained to keep the subscription active.
-  @MainActor
-  func subscribe(updates: @escaping ((old: State?, new: State)) -> Void) async -> AnyCancellable {
-    let result = await changesSubject.sink(receiveValue: { old, new in
+  func subscribe(updates: @escaping @Sendable ((old: State?, new: State)) -> Void) -> AnyCancellable {
+    let result = changesSubject.sink { old, new in
       updates((old: old, new: new))
-    })
-
-    // Send initial state
-    let currentState = await state
-    updates((nil, currentState))
-
+    }
+    updates((nil, state))
     return result
   }
 
@@ -123,7 +118,7 @@ extension BindifyStore {
   /// ```
   ///
   /// - Parameter block: A closure that modifies the current state. The state is passed as an `inout` parameter.
-  public func update(state block: (inout State) -> Void) {
+  public func update(state block: @Sendable (inout State) -> Void) {
     let oldState = state
     block(&state)
 
