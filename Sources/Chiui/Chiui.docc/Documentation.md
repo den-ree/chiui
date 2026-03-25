@@ -1,10 +1,10 @@
-# ``CIUA``
+# ``Chiui``
 
 A modern state management solution for Swift applications with flexible side effects.
 
 ## Overview
 
-CIUA is a lightweight, type-safe state management library that provides unidirectional data flow with flexible side effect handling. It combines Swift's actor model with Combine to deliver predictable state management and reactive UI updates.
+Chiui is a lightweight, type-safe state management library that provides unidirectional data flow with flexible side effect handling. It combines Swift's actor model with Combine to deliver predictable state management and reactive UI updates.
 
 ## Core Components
 
@@ -26,7 +26,7 @@ CIUA is a lightweight, type-safe state management library that provides unidirec
 
 ### Flexible Side Effects
 
-CIUA's `then()` API provides powerful chaining for state updates:
+Chiui's `then()` API provides powerful chaining for state updates:
 
 ```swift
 // Update state with side effects

@@ -1,6 +1,6 @@
 //
 //  ContextualStore.swift
-//  CIUA
+//  Chiui
 //
 //  Created by Den Ree on 04/04/2025.
 //

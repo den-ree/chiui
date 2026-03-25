@@ -1,13 +1,13 @@
 //
 //  ContextViewModel.swift
-//  CIUA
+//  Chiui
 //
 //  Created by Den Ree on 04/04/2025.
 //
 
 @preconcurrency import Combine
 
-/// A protocol that defines the basic requirements for a view model in CIUA.
+/// A protocol that defines the basic requirements for a view model in Chiui.
 ///
 /// `ContextualViewModel` serves as the foundation for view models, requiring them to:
 /// - Be observable objects for SwiftUI integration
@@ -16,7 +16,7 @@
 ///
 /// ## Overview
 ///
-/// This protocol is the base requirement for all view models in the CIUA framework.
+/// This protocol is the base requirement for all view models in the Chiui framework.
 /// It ensures that view models can properly integrate with the store and handle state updates.
 public protocol ContextualViewModel: ObservableObject {
   /// The type of context that provides access to the store.
@@ -36,7 +36,7 @@ public protocol ContextualViewModel: ObservableObject {
 ///
 /// ## Overview
 ///
-/// This class implements the core state management logic for views in the CIUA framework.
+/// This class implements the core state management logic for views in the Chiui framework.
 /// It handles the flow of data between the store and the view, ensuring that:
 /// - Store updates are properly reflected in the view state
 /// - State changes are properly tracked and managed

@@ -1,19 +1,19 @@
 //
 //  ContextualState.swift
-//  CIUA
+//  Chiui
 //
 //  Created by Den Ree on 04/04/2025.
 //
 
-/// A protocol that defines the base requirements for all state types in the CIUA framework.
+/// A protocol that defines the base requirements for all state types in the Chiui framework.
 ///
-/// All states in CIUA must conform to this protocol, which ensures they are:
+/// All states in Chiui must conform to this protocol, which ensures they are:
 /// - Value types that can be compared for equality
 /// - Thread-safe for concurrent access
 ///
 /// ## Overview
 ///
-/// The `ContextualState` protocol serves as the foundation for all state management in CIUA.
+/// The `ContextualState` protocol serves as the foundation for all state management in Chiui.
 /// It enforces immutability and thread safety, which are crucial for predictable state management
 /// in a unidirectional data flow architecture.
 ///
@@ -35,7 +35,7 @@
 /// - ``ContextualViewState``
 public protocol ContextualState: Equatable & Sendable {}
 
-/// A protocol that defines the state for a store in CIUA.
+/// A protocol that defines the state for a store in Chiui.
 ///
 /// The `ContextualStoreState` represents the source of truth for your application or feature.
 /// It should contain only the essential data that needs to be shared and persisted.
@@ -65,7 +65,7 @@ public protocol ContextualState: Equatable & Sendable {}
 /// - ``ContextualViewState``
 public protocol ContextualStoreState: ContextualState {}
 
-/// A protocol that defines the state for a view in CIUA.
+/// A protocol that defines the state for a view in Chiui.
 ///
 /// The `ContextualViewState` represents the UI-specific state that can be updated in two ways:
 /// 1. Derived from store state (for shared data)
@@ -120,16 +120,16 @@ public protocol ContextualViewState: ContextualState {
   init()
 }
 
-/// A protocol that defines the base requirements for all action types in CIUA.
+/// A protocol that defines the base requirements for all action types in Chiui.
 ///
-/// Actions in CIUA represent user interactions or system events that can trigger state changes.
+/// Actions in Chiui represent user interactions or system events that can trigger state changes.
 /// They must be:
 /// - Value types that can be compared for equality
 /// - Thread-safe for concurrent access
 ///
 /// ## Overview
 ///
-/// The `ContextualAction` protocol serves as the foundation for all actions in CIUA.
+/// The `ContextualAction` protocol serves as the foundation for all actions in Chiui.
 /// It enforces immutability and thread safety, which are crucial for predictable state management
 /// in a unidirectional data flow architecture.
 ///
