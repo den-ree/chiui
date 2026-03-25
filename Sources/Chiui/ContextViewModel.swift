@@ -1,42 +1,45 @@
 //
-//  BindifyViewModel.swift
-//  Bindify
+//  ContextViewModel.swift
+//  Chiui
 //
 //  Created by Den Ree on 04/04/2025.
 //
 
 @preconcurrency import Combine
 
-/// A protocol that defines the basic requirements for a view model in the Bindify framework.
+/// A protocol that defines the basic requirements for a view model in Chiui.
 ///
-/// `BindifiableViewModel` serves as the foundation for view models, requiring them to:
+/// `ContextualViewModel` serves as the foundation for view models, requiring them to:
 /// - Be observable objects for SwiftUI integration
 /// - Define their store context type
 /// - Define their view state type
 ///
 /// ## Overview
 ///
-/// This protocol is the base requirement for all view models in the Bindify framework.
+/// This protocol is the base requirement for all view models in the Chiui framework.
 /// It ensures that view models can properly integrate with the store and handle state updates.
-public protocol BindifiableViewModel: ObservableObject {
+public protocol ContextualViewModel: ObservableObject {
   /// The type of context that provides access to the store.
-  associatedtype StoreContext: BindifyContext
+  associatedtype InjectedStoreContext: StoreContext
 
   /// The type of state used by this view model.
-  associatedtype ViewState: BindifyViewState
+  associatedtype ViewState: ContextualViewState
 }
 
 /// A base view model class that integrates with a store and manages state.
 ///
-/// `BindifyViewModel` provides core functionality for:
+/// `ContextViewModel` provides core functionality for Chiui's context-based unidirectional state
+/// management in SwiftUI.
+///
+/// It implements:
 /// - Unidirectional data flow from store state to view state
 /// - Reactive updates when store state changes
 /// - Lifecycle management of subscriptions
-/// - Fluent state update API with chaining
+/// - Fluent local state update API with async chaining
 ///
 /// ## Overview
 ///
-/// This class implements the core state management logic for views in the Bindify framework.
+/// This class implements the core state management logic for views in the Chiui framework.
 /// It handles the flow of data between the store and the view, ensuring that:
 /// - Store updates are properly reflected in the view state
 /// - State changes are properly tracked and managed
@@ -45,14 +48,14 @@ public protocol BindifiableViewModel: ObservableObject {
 /// ## Usage
 ///
 /// ```swift
-/// final class UserProfileViewModel: BindifyViewModel<AppContext, UserProfileViewState> {
-///     override func scopeStateOnStoreChange(_ storeState: AppContext.StoreState) async {
+/// final class UserProfileViewModel: ContextViewModel<AppContext, UserProfileViewState> {
+///     override func didStoreUpdate(_ storeState: AppContext.StoreState) async {
 ///         updateState { state in
 ///             state.name = storeState.userProfile.name
 ///             state.isSavingDisabled = storeState.userProfile.name.isEmpty
 ///         }
 ///     }
-///     
+///
 ///     func updateName(_ name: String) {
 ///         updateState { state in
 ///             state.name = name
@@ -74,53 +77,61 @@ public protocol BindifiableViewModel: ObservableObject {
 ///
 /// ### State Management
 ///
-/// - ``scopeStateOnStoreChange(_:)``
+/// - ``didStoreUpdate(_:)``
 /// - ``updateState(_:)``
 /// - ``updateStore(_:)``
 ///
 /// ### Related Types
 ///
-/// - ``BindifyContext``
-/// - ``BindifyViewState``
-/// - ``BindifyStateChange``
-/// - ``BindifyStateSideEffect``
-open class BindifyViewModel<StoreContext: BindifyContext, ViewState: BindifyViewState>: BindifiableViewModel {
+/// - ``StoreContext``
+/// - ``ContextualViewState``
+/// - ``ContextualStateChange``
+/// - ``ContextualStateSideEffect``
+@MainActor
+open class ContextViewModel<InjectedStoreContext: StoreContext, ViewState: ContextualViewState>: ContextualViewModel {
+  /// The current view state
+  public var state: ViewState { viewState }
+
+  /// The store context used by this view model
+  public let context: InjectedStoreContext
+
   /// Set of cancellables to manage subscriptions
   private var cancellables = Set<AnyCancellable>()
 
-  private var hasInitialState: Bool = true
+  private var storeUpdateTask: Task<Void, Never>?
+  private var connectTask: Task<Void, Never>?
 
-  /// The store context used by this view model
-  public let context: StoreContext
+  private var hasInitialState: Bool = true
 
   /// The current read-only state derived from the store state, specifically scoped for the view
   @Published fileprivate(set) var viewState: ViewState
 
   /// Creates a new view model instance with the given store context
   /// - Parameter context: The store context to use for state management
-  @MainActor public init(_ context: StoreContext) {
+  public init(_ context: InjectedStoreContext) {
     self.context = context
     self.viewState = .init()
 
-    let store = context.store
-
-    Task {
-      await store.subscribe { [weak self] old, new in
-        guard let self = self else { return }
-        
-        Task {
-          await self.scopeStateOnStoreChange(new)
+    connectTask = Task { [weak self] in
+      let subscription = await context.store.subscribe { [weak self] (old: InjectedStoreContext.StoreState?, new: InjectedStoreContext.StoreState) in
+        Task { @MainActor [weak self] in
+          self?.storeUpdateTask?.cancel()
+          self?.storeUpdateTask = Task { [weak self] in
+            guard let self else { return }
+            await self.didStoreUpdate(new)
+          }
         }
-      }.store(in: &cancellables)
+      }
+      self?.cancellables.insert(subscription)
     }
   }
 
   deinit {
-    cancellables.forEach { $0.cancel() }
-    cancellables.removeAll()
+    connectTask?.cancel()
+    storeUpdateTask?.cancel()
   }
 
-  /// Scopes the store state into the local view state
+  /// Called when the store state has been updated
   ///
   /// This is the core mapping function that defines how the view state is derived from the store state.
   /// It should be pure and deterministic - the same store state should always produce the same view state.
@@ -135,7 +146,7 @@ open class BindifyViewModel<StoreContext: BindifyContext, ViewState: BindifyView
   /// ## Usage
   ///
   /// ```swift
-  /// override func scopeStateOnStoreChange(_ storeState: AppContext.StoreState) async {
+  /// override func didStoreUpdate(_ storeState: AppContext.StoreState) async {
   ///     updateState { state in
   ///         state.name = storeState.userProfile.name
   ///         state.isSavingDisabled = storeState.userProfile.name.isEmpty
@@ -144,8 +155,8 @@ open class BindifyViewModel<StoreContext: BindifyContext, ViewState: BindifyView
   /// ```
   ///
   /// - Parameter storeState: The current store state
-  open func scopeStateOnStoreChange(
-    _ storeState: StoreContext.StoreState
+  nonisolated open func didStoreUpdate(
+    _ storeState: InjectedStoreContext.StoreState
   ) async {
     // Default implementation does nothing
   }
@@ -153,21 +164,32 @@ open class BindifyViewModel<StoreContext: BindifyContext, ViewState: BindifyView
   /// Updates the global store's state using a mutation block
   ///
   /// - Parameter block: A closure that modifies the store's state
-  @MainActor
-  public func updateStore(_ block: @escaping (inout StoreContext.StoreState) -> Void) {
-    Task { @MainActor in
+  ///
+  /// - Returns: A task that completes when the store update has been applied.
+  @discardableResult
+  public func updateStore(_ block: @escaping @Sendable (inout InjectedStoreContext.StoreState) -> Void) -> Task<Void, Never> {
+    Task {
       await context.store.update(state: block)
     }
   }
 
-  @MainActor
   @discardableResult
-  public func updateState(_ block: @escaping @MainActor (inout ViewState) -> Void) -> BindifyStateSideEffect<ViewState> {
+  /// Mutates the view's local state by computing a `ContextualStateChange`.
+  ///
+  /// This method is unidirectional: it computes `oldState`/`newState`, updates `state` only when
+  /// values actually changed, and returns a side-effect handle you can chain with `then(_:)`.
+  ///
+  /// - Important: You can check `change.hasChanged` inside the `then` block to avoid performing
+  ///   work when the mutation does not actually change values.
+  ///
+  /// - Parameter block: A closure that mutates a copy of the current `ViewState`.
+  /// - Returns: A `ContextualStateSideEffect` that carries the computed state change.
+  public func updateState(_ block: (inout ViewState) -> Void) -> ContextualStateSideEffect<ViewState> {
     let oldState = viewState
     var newState = viewState
     block(&newState)
 
-    let change = BindifyStateChange(oldState: oldState, newState: newState, isInitial: hasInitialState)
+    let change = ContextualStateChange(oldState: oldState, newState: newState, isInitial: hasInitialState)
 
     if change.hasChanged {
       viewState = change.newState
@@ -177,7 +199,15 @@ open class BindifyViewModel<StoreContext: BindifyContext, ViewState: BindifyView
     return .init(change: change)
   }
 
-  @MainActor
+  /// Reads a scoped value from the current view state and performs async work with it.
+  ///
+  /// Use this when you need to snapshot derived data from `state` and do async work without
+  /// leaking `ViewState` mutations outside of the view model.
+  ///
+  /// - Parameters:
+  ///   - scopeBlock: Maps the current `ViewState` into a smaller value for the async work.
+  ///   - block: Async closure executed with the scoped value.
+  /// - Returns: `Void`.
   public func scopeState<T>(_ scopeBlock: @escaping (ViewState) -> T, _ block: @escaping (T) async -> Void) async -> Void {
     await block(scopeBlock(viewState))
   }
@@ -192,3 +222,4 @@ open class BindifyViewModel<StoreContext: BindifyContext, ViewState: BindifyView
     cancelable.store(in: &cancellables)
   }
 }
+

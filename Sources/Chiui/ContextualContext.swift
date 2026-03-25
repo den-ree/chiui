@@ -1,6 +1,6 @@
 //
-//  BindifyContext.swift
-//  Bindify
+//  ContextualContext.swift
+//  Chiui
 //
 //  Created by Den Ree on 04/04/2025.
 //
@@ -9,7 +9,7 @@ import Foundation
 
 /// A protocol that defines the context for managing application state.
 ///
-/// The `BindifyContext` protocol serves as a dependency injection container for the store,
+/// The `StoreContext` protocol serves as a dependency injection container for the store,
 /// providing a single source of truth for state management. It enforces the unidirectional
 /// data flow pattern where all state changes must go through the store.
 ///
@@ -27,26 +27,26 @@ import Foundation
 ///
 /// ### Global State Example
 /// ```swift
-/// struct AppContext: BindifyContext {
+/// struct AppContext: StoreContext {
 ///     typealias StoreState = AppStoreState
 ///
-///     let store: BindifyStore<AppStoreState>
+///     let store: ContextualStore<AppStoreState>
 ///
 ///     init(initialState: AppStoreState) {
-///         self.store = BindifyStore(initialState: initialState)
+///         self.store = ContextualStore(initialState)
 ///     }
 /// }
 /// ```
 ///
 /// ### Feature State Example
 /// ```swift
-/// struct AuthContext: BindifyContext {
+/// struct AuthContext: StoreContext {
 ///     typealias StoreState = AuthStoreState
 ///
-///     let store: BindifyStore<AuthStoreState>
+///     let store: ContextualStore<AuthStoreState>
 ///
 ///     init(initialState: AuthStoreState) {
-///         self.store = BindifyStore(initialState: initialState)
+///         self.store = ContextualStore(initialState)
 ///     }
 /// }
 /// ```
@@ -60,15 +60,15 @@ import Foundation
 ///
 /// ### Related Types
 ///
-/// - ``BindifyStore``
-/// - ``BindifyStoreState``
-public protocol BindifyContext {
+/// - ``ContextualStore``
+/// - ``ContextualStoreState``
+public protocol StoreContext: Sendable {
   /// The type of store state used by this context.
   ///
-  /// This associated type must conform to ``BindifyStoreState`` and represents
+  /// This associated type must conform to ``ContextualStoreState`` and represents
   /// the structure of your state, whether it's global application state or
   /// feature-specific state.
-  associatedtype StoreState: BindifyStoreState
+  associatedtype StoreState: ContextualStoreState
 
   /// The store instance that manages the state.
   ///
@@ -79,6 +79,6 @@ public protocol BindifyContext {
   ///
   /// All state modifications should be performed through this store to maintain
   /// the unidirectional data flow pattern.
-  var store: BindifyStore<StoreState> { get }
+  var store: ContextualStore<StoreState> { get }
 }
 

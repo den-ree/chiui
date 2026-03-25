@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		774570BB2DDD0216004AB32E /* Bindify in Frameworks */ = {isa = PBXBuildFile; productRef = 774570BA2DDD0216004AB32E /* Bindify */; };
+		774570BB2DDD0216004AB32E /* Chiui in Frameworks */ = {isa = PBXBuildFile; productRef = 774570BA2DDD0216004AB32E /* Chiui */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -56,7 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				774570BB2DDD0216004AB32E /* Bindify in Frameworks */,
+				774570BB2DDD0216004AB32E /* Chiui in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -117,7 +117,7 @@
 			);
 			name = DiaryApp;
 			packageProductDependencies = (
-				774570BA2DDD0216004AB32E /* Bindify */,
+				774570BA2DDD0216004AB32E /* Chiui */,
 			);
 			productName = DiaryApp;
 			productReference = 774570542DDCFF04004AB32E /* DiaryApp.app */;
@@ -202,7 +202,7 @@
 			mainGroup = 7745704B2DDCFF04004AB32E;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				774570B92DDD0216004AB32E /* XCLocalSwiftPackageReference "../../../Bindify" */,
+				774570B92DDD0216004AB32E /* XCLocalSwiftPackageReference "../../../CIUA" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 774570552DDCFF04004AB32E /* Products */;
@@ -594,16 +594,16 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		774570B92DDD0216004AB32E /* XCLocalSwiftPackageReference "../../../Bindify" */ = {
+		774570B92DDD0216004AB32E /* XCLocalSwiftPackageReference "../../../CIUA" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ../../../Bindify;
+			relativePath = ../../../CIUA;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		774570BA2DDD0216004AB32E /* Bindify */ = {
+		774570BA2DDD0216004AB32E /* Chiui */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = Bindify;
+			productName = Chiui;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

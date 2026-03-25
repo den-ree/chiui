@@ -1,11 +1,11 @@
 import Foundation
-import Bindify
+import Chiui
 import SwiftUI
 
 /// View model for the diary list screen
-final class DiaryListViewModel: BindifyViewModel<DiaryContext, DiaryListViewModel.State> {
+final class DiaryListViewModel: ContextViewModel<DiaryContext, DiaryListViewModel.State> {
   /// State for the diary list screen
-  struct State: BindifyViewState {
+  struct State: ContextualViewState {
     /// Collection of diary entries to display
     var entries: [DiaryEntry] = []
     /// Currently selected entry for navigation
@@ -30,7 +30,7 @@ final class DiaryListViewModel: BindifyViewModel<DiaryContext, DiaryListViewMode
 
   /// Transforms the store state into the view state
   /// - Parameter storeState: Current store state
-  override func scopeStateOnStoreChange(
+  nonisolated override func didStoreUpdate(
     _ storeState: DiaryStoreState
   ) async {
     await updateState { state in
@@ -46,38 +46,33 @@ final class DiaryListViewModel: BindifyViewModel<DiaryContext, DiaryListViewMode
 
   // MARK: - Actions
 
-  @MainActor
   func selectEntry(_ entry: DiaryEntry) {
     updateStore { storeState in
       storeState.entrySelectionMode = .selecting(entry)
     }
   }
 
-  @MainActor
   func clearSelection() {
     updateStore { storeState in
       storeState.entrySelectionMode = .no
     }
   }
 
-  @MainActor
   func startAddingNew() {
     updateStore { storeState in
       storeState.entrySelectionMode = .addingNew
     }
   }
 
-  @MainActor
   func finishAddingNew() {
     updateState { state in
       state.isAddingNew = false
     }
   }
 
-  @MainActor
   func removeEntry(at index: Int) {
     Task {
-      await sideEffect { [weak self] state in
+      await scopeState({ $0 }) { [weak self] state in
         let entry = state.entry(at: index)
         
         self?.updateStore { storeState in
@@ -87,14 +82,12 @@ final class DiaryListViewModel: BindifyViewModel<DiaryContext, DiaryListViewMode
     }
   }
 
-  @MainActor
   func removeEntryById(_ id: UUID) {
     updateStore { storeState in
       storeState.entries.removeAll { $0.id == id }
     }
   }
 
-  @MainActor
   func refresh() {
     updateState { state in
       state.isRefreshing = true

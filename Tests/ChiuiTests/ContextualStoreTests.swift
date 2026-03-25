@@ -1,0 +1,168 @@
+import Foundation
+import Testing
+@testable import Chiui
+
+@Suite("Chiui ContextualStore Tests")
+struct ContextualStoreTests {
+  struct TestState: ContextualStoreState {
+    var count: Int
+    var isEnabled: Bool
+
+    init(count: Int = 0, isEnabled: Bool = false) {
+      self.count = count
+      self.isEnabled = isEnabled
+    }
+  }
+
+  actor UpdateCollector {
+    typealias Update = (old: TestState?, new: TestState)
+    private(set) var updates: [Update] = []
+
+    func append(old: TestState?, new: TestState) {
+      updates.append((old: old, new: new))
+    }
+
+    func snapshot() -> [Update] { updates }
+    func count() -> Int { updates.count }
+  }
+
+  @Test("Subscribe immediately emits initial state")
+  func testSubscribeSendsInitialState() async throws {
+    let store = ContextualStore(TestState(count: 5, isEnabled: true))
+    let collector = UpdateCollector()
+
+    let subscription = await store.subscribe { old, new in
+      Task { await collector.append(old: old, new: new) }
+    }
+
+    #expect(await TestUtils.waitUntil(timeout: .seconds(1)) { await collector.count() == 1 })
+
+    let updates = await collector.snapshot()
+    #expect(updates.count == 1)
+    #expect(updates[0].old == nil)
+    #expect(updates[0].new.count == 5)
+    #expect(updates[0].new.isEnabled == true)
+
+    subscription.cancel()
+  }
+
+  @Test("Store only notifies on Equatable state changes")
+  func testUpdateSendsOnlyWhenChanged() async throws {
+    let store = ContextualStore(TestState(count: 1, isEnabled: false))
+    let collector = UpdateCollector()
+
+    let subscription = await store.subscribe { old, new in
+      Task { await collector.append(old: old, new: new) }
+    }
+
+    #expect(await TestUtils.waitUntil(timeout: .seconds(1)) { await collector.count() == 1 })
+    let initial = (await collector.snapshot())[0].new
+
+    // No-op mutation (same value -> should not emit).
+    await store.update { state in
+      state.count = initial.count
+      state.isEnabled = initial.isEnabled
+    }
+
+    // Wait briefly for possible (incorrect) emission.
+    try? await Task.sleep(for: .milliseconds(50))
+    #expect(await collector.count() == 1)
+
+    // Real change should emit exactly once.
+    await store.update { state in
+      state.count = 2
+      state.isEnabled = true
+    }
+
+    #expect(await TestUtils.waitUntil(timeout: .seconds(1)) { await collector.count() == 2 })
+    let updates = await collector.snapshot()
+
+    #expect(updates[1].old?.count == 1)
+    #expect(updates[1].new.count == 2)
+    #expect(updates[1].new.isEnabled == true)
+
+    subscription.cancel()
+  }
+
+  @Test("Sequential updates preserve notification order")
+  func testSequentialUpdateOrder() async throws {
+    let store = ContextualStore(TestState(count: 0, isEnabled: false))
+    let collector = UpdateCollector()
+
+    let subscription = await store.subscribe { old, new in
+      Task { await collector.append(old: old, new: new) }
+    }
+
+    let updateCount = 5
+    for i in 1...updateCount {
+      await store.update { state in
+        state.count = i
+      }
+    }
+
+    #expect(await TestUtils.waitUntil(timeout: .seconds(1)) { await collector.count() == updateCount + 1 })
+    let updates = await collector.snapshot()
+
+    let newCounts = updates.map { $0.new.count }
+    #expect(newCounts == [0, 1, 2, 3, 4, 5])
+
+    subscription.cancel()
+  }
+
+  @Test("Cancelling a subscription stops further notifications")
+  func testSubscriptionCancellationStopsNotifications() async throws {
+    let store = ContextualStore(TestState(count: 0))
+    let collector = UpdateCollector()
+
+    let subscription = await store.subscribe { old, new in
+      Task { await collector.append(old: old, new: new) }
+    }
+
+    #expect(await TestUtils.waitUntil(timeout: .seconds(1)) { await collector.count() == 1 })
+
+    subscription.cancel()
+
+    await store.update { state in
+      state.count = 1
+    }
+
+    try? await Task.sleep(for: .milliseconds(50))
+    #expect(await collector.count() == 1)
+  }
+
+  @Test("Concurrent updates are safe and all notifications are delivered")
+  func testConcurrentUpdatesDelivery() async throws {
+    let store = ContextualStore(TestState(count: 0, isEnabled: false))
+    let collector = UpdateCollector()
+
+    let subscription = await store.subscribe { old, new in
+      Task { await collector.append(old: old, new: new) }
+    }
+
+    let updateCount = 100
+
+    // Each update uses a unique value, so every update should result in a notification.
+    for i in 0..<updateCount {
+      Task {
+        await store.update { state in
+          state.count = i
+          state.isEnabled = (i % 2 == 0)
+        }
+      }
+    }
+
+    #expect(await TestUtils.waitUntil(timeout: .seconds(3)) { await collector.count() == updateCount + 1 })
+    let updates = await collector.snapshot()
+
+    let newCounts = updates.dropFirst().map { $0.new.count }
+    #expect(Set(newCounts) == Set((0..<updateCount).map { $0 }))
+
+    // Quick sanity: no nil old states beyond initial emission.
+    for update in updates.dropFirst() {
+      #expect(update.old != nil)
+    }
+
+    subscription.cancel()
+  }
+}
+
