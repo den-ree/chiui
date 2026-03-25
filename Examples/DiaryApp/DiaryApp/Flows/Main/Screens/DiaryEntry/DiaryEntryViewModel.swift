@@ -1,8 +1,8 @@
 import Foundation
-import Bindify
+import CIUA
 import SwiftUI
 
-final class DiaryEntryViewModel: BindifyViewModel<DiaryContext, DiaryEntryViewModel.State> {
+final class DiaryEntryViewModel: ContextViewModel<DiaryContext, DiaryEntryViewModel.State> {
   enum SavingStatus: Equatable {
     case no
     case saving
@@ -10,7 +10,7 @@ final class DiaryEntryViewModel: BindifyViewModel<DiaryContext, DiaryEntryViewMo
   }
 
   /// State for the add diary entry screen
-  struct State: BindifyViewState {
+  struct State: ContextualViewState {
     var title: String = ""
     var content: String = ""
     var savingStatus: SavingStatus = .no
@@ -121,7 +121,8 @@ final class DiaryEntryViewModel: BindifyViewModel<DiaryContext, DiaryEntryViewMo
           break
         }
       }
-      try? await Task.sleep(for: .seconds(2))
+      // Simulate loading work via a non-Sendable client.
+      await self.context.loadingClient.simulateLoadingWork()
       await markAsSaved()
     }
   }

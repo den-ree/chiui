@@ -1,6 +1,6 @@
 import XCTest
 @testable import DiaryApp
-@testable import Bindify
+@testable import CIUA
 
 final class DiaryEntryViewModelTests: XCTestCase {
   var sut: DiaryEntryViewModel!

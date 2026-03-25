@@ -1,11 +1,11 @@
 import Foundation
-import Bindify
+import CIUA
 import SwiftUI
 
 /// View model for the diary list screen
-final class DiaryListViewModel: BindifyViewModel<DiaryContext, DiaryListViewModel.State> {
+final class DiaryListViewModel: ContextViewModel<DiaryContext, DiaryListViewModel.State> {
   /// State for the diary list screen
-  struct State: BindifyViewState {
+  struct State: ContextualViewState {
     /// Collection of diary entries to display
     var entries: [DiaryEntry] = []
     /// Currently selected entry for navigation

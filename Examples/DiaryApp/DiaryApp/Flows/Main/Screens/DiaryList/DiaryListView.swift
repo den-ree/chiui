@@ -1,8 +1,8 @@
 import SwiftUI
-import Bindify
+import CIUA
 
 /// View for displaying the list of diary entries
-struct DiaryListView: BindifyView {
+struct DiaryListView: ContextualView {
   /// View model for the diary list
   @StateObject var viewModel: DiaryListViewModel
 
