@@ -52,14 +52,18 @@ struct DiaryEntryView: BindifyView {
             ToolbarItem(placement: .navigationBarLeading) {
               Button("Cancel") {
                 focusedField = nil
-                viewModel.finishEditing(save: false)
+                Task {
+                  await viewModel.finishEditing(save: false)
+                }
               }
             }
 
             ToolbarItem(placement: .navigationBarTrailing) {
               Button("Save") {
                 focusedField = nil
-                viewModel.finishEditing(save: true)
+                Task {
+                  await viewModel.finishEditing(save: true)
+                }
               }
               .disabled(state.isSavingDisabled)
             }

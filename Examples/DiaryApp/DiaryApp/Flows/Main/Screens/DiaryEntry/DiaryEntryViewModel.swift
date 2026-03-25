@@ -37,7 +37,7 @@ final class DiaryEntryViewModel: BindifyViewModel<DiaryContext, DiaryEntryViewMo
 
   /// Transforms the store state into the view state
   /// - Parameter storeState: Current store state
-  override func scopeStateOnStoreChange(
+  nonisolated override func didStoreUpdate(
     _ storeState: DiaryStoreState
   ) async {
     await updateState { state in
@@ -63,30 +63,29 @@ final class DiaryEntryViewModel: BindifyViewModel<DiaryContext, DiaryEntryViewMo
 
   // MARK: - Actions
 
-  @MainActor func updateTitle(_ title: String) {
+  func updateTitle(_ title: String) {
     updateState { state in
       state.title = title
     }
   }
 
-  @MainActor func updateContent(_ content: String) {
+  func updateContent(_ content: String) {
     updateState { state in
       state.content = content
     }
   }
 
-  @MainActor func startEditing() {
+  func startEditing() {
     updateState { state in
       state.isEditing = true
     }
   }
 
-  @MainActor
-  func finishEditing(save: Bool) {
+  func finishEditing(save: Bool) async {
     guard save else {
-        updateState { state in
+        await updateState { state in
           state.isEditing = false
-        }.sideEffect { [weak self] _ in
+        }.then { [weak self] _ in
           self?.updateStore {
             $0.entrySelectionMode = .no
           }
@@ -94,13 +93,13 @@ final class DiaryEntryViewModel: BindifyViewModel<DiaryContext, DiaryEntryViewMo
       return
     }
 
-    updateState { state in
+    await updateState { state in
       state.savingStatus = .saving
 
       guard !state.title.isEmpty else {
         return
       }
-    }.sideEffect { [weak self] change in
+    }.then { [weak self] change in
       guard let self, change.hasChanged else { return }
       let state = change.newState
 
@@ -123,16 +122,16 @@ final class DiaryEntryViewModel: BindifyViewModel<DiaryContext, DiaryEntryViewMo
         }
       }
       try? await Task.sleep(for: .seconds(2))
-      markAsSaved()
+      await markAsSaved()
     }
   }
 
-  @MainActor
-  func markAsSaved() {
-    updateState { state in
+  func markAsSaved() async {
+    // Example of waiting
+    await updateState { state in
       state.savingStatus = .saved
       state.isEditing = false
-    }.sideEffect {  [weak self] change in
+    }.then {  [weak self] change in
       self?.updateStore { storeState in
         storeState.entrySelectionMode = .no
       }
