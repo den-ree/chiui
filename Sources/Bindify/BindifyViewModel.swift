@@ -46,7 +46,7 @@ public protocol BindifiableViewModel: ObservableObject {
 ///
 /// ```swift
 /// final class UserProfileViewModel: BindifyViewModel<AppContext, UserProfileViewState> {
-///     override func scopeStateOnStoreChange(_ storeState: AppContext.StoreState) async {
+///     override func didStoreUpdate(_ storeState: AppContext.StoreState) async {
 ///         updateState { state in
 ///             state.name = storeState.userProfile.name
 ///             state.isSavingDisabled = storeState.userProfile.name.isEmpty
@@ -74,7 +74,7 @@ public protocol BindifiableViewModel: ObservableObject {
 ///
 /// ### State Management
 ///
-/// - ``scopeStateOnStoreChange(_:)``
+/// - ``didStoreUpdate(_:)``
 /// - ``updateState(_:)``
 /// - ``updateStore(_:)``
 ///
@@ -84,43 +84,51 @@ public protocol BindifiableViewModel: ObservableObject {
 /// - ``BindifyViewState``
 /// - ``BindifyStateChange``
 /// - ``BindifyStateSideEffect``
+@MainActor
 open class BindifyViewModel<StoreContext: BindifyContext, ViewState: BindifyViewState>: BindifiableViewModel {
-  /// Set of cancellables to manage subscriptions
-  private var cancellables = Set<AnyCancellable>()
-
-  private var hasInitialState: Bool = true
+  /// The current view state
+  public var state: ViewState { viewState }
 
   /// The store context used by this view model
   public let context: StoreContext
+
+  /// Set of cancellables to manage subscriptions
+  private var cancellables = Set<AnyCancellable>()
+
+  private var storeUpdateTask: Task<Void, Never>?
+  private var connectTask: Task<Void, Never>?
+
+  private var hasInitialState: Bool = true
 
   /// The current read-only state derived from the store state, specifically scoped for the view
   @Published fileprivate(set) var viewState: ViewState
 
   /// Creates a new view model instance with the given store context
   /// - Parameter context: The store context to use for state management
-  @MainActor public init(_ context: StoreContext) {
+  public init(_ context: StoreContext) {
     self.context = context
     self.viewState = .init()
 
-    let store = context.store
-
-    Task {
-      await store.subscribe { [weak self] old, new in
-        guard let self = self else { return }
-        
-        Task {
-          await self.scopeStateOnStoreChange(new)
+    connectTask = Task { [weak self] in
+      let subscription = await context.store.subscribe { [weak self] _, new in
+        Task { @MainActor [weak self] in
+          self?.storeUpdateTask?.cancel()
+          self?.storeUpdateTask = Task { [weak self] in
+            guard let self else { return }
+            await self.didStoreUpdate(new)
+          }
         }
-      }.store(in: &cancellables)
+      }
+      self?.cancellables.insert(subscription)
     }
   }
 
   deinit {
-    cancellables.forEach { $0.cancel() }
-    cancellables.removeAll()
+    connectTask?.cancel()
+    storeUpdateTask?.cancel()
   }
 
-  /// Scopes the store state into the local view state
+  /// Called when the store state has been updated
   ///
   /// This is the core mapping function that defines how the view state is derived from the store state.
   /// It should be pure and deterministic - the same store state should always produce the same view state.
@@ -135,7 +143,7 @@ open class BindifyViewModel<StoreContext: BindifyContext, ViewState: BindifyView
   /// ## Usage
   ///
   /// ```swift
-  /// override func scopeStateOnStoreChange(_ storeState: AppContext.StoreState) async {
+  /// override func didStoreUpdate(_ storeState: AppContext.StoreState) async {
   ///     updateState { state in
   ///         state.name = storeState.userProfile.name
   ///         state.isSavingDisabled = storeState.userProfile.name.isEmpty
@@ -144,7 +152,7 @@ open class BindifyViewModel<StoreContext: BindifyContext, ViewState: BindifyView
   /// ```
   ///
   /// - Parameter storeState: The current store state
-  open func scopeStateOnStoreChange(
+  nonisolated open func didStoreUpdate(
     _ storeState: StoreContext.StoreState
   ) async {
     // Default implementation does nothing
@@ -153,16 +161,15 @@ open class BindifyViewModel<StoreContext: BindifyContext, ViewState: BindifyView
   /// Updates the global store's state using a mutation block
   ///
   /// - Parameter block: A closure that modifies the store's state
-  @MainActor
-  public func updateStore(_ block: @escaping (inout StoreContext.StoreState) -> Void) {
-    Task { @MainActor in
+  @discardableResult
+  public func updateStore(_ block: @escaping @Sendable (inout StoreContext.StoreState) -> Void) -> Task<Void, Never> {
+    Task {
       await context.store.update(state: block)
     }
   }
 
-  @MainActor
   @discardableResult
-  public func updateState(_ block: @escaping @MainActor (inout ViewState) -> Void) -> BindifyStateSideEffect<ViewState> {
+  public func updateState(_ block: (inout ViewState) -> Void) -> BindifyStateSideEffect<ViewState> {
     let oldState = viewState
     var newState = viewState
     block(&newState)
@@ -177,7 +184,6 @@ open class BindifyViewModel<StoreContext: BindifyContext, ViewState: BindifyView
     return .init(change: change)
   }
 
-  @MainActor
   public func scopeState<T>(_ scopeBlock: @escaping (ViewState) -> T, _ block: @escaping (T) async -> Void) async -> Void {
     await block(scopeBlock(viewState))
   }
