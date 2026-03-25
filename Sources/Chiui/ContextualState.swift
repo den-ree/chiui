@@ -120,36 +120,6 @@ public protocol ContextualViewState: ContextualState {
   init()
 }
 
-/// A protocol that defines the base requirements for all action types in Chiui.
-///
-/// Actions in Chiui represent user interactions or system events that can trigger state changes.
-/// They must be:
-/// - Value types that can be compared for equality
-/// - Thread-safe for concurrent access
-///
-/// ## Overview
-///
-/// The `ContextualAction` protocol serves as the foundation for all actions in Chiui.
-/// It enforces immutability and thread safety, which are crucial for predictable state management
-/// in a unidirectional data flow architecture.
-///
-/// ## Usage
-///
-/// ```swift
-/// enum UserAction: ContextualAction {
-///     case updateName(String)
-///     case toggleActive
-///     case save
-/// }
-/// ```
-///
-/// ## Topics
-///
-/// ### Related Types
-///
-/// - ``ContextualState``
-public protocol ContextualAction: Equatable, Sendable {}
-
 /// A structure that represents a view state change with metadata.
 ///
 /// `ContextualStateChange` tracks the lifecycle of a state mutation attempt, including:
