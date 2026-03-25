@@ -33,7 +33,7 @@ import Foundation
 ///     let store: ContextualStore<AppStoreState>
 ///
 ///     init(initialState: AppStoreState) {
-///         self.store = ContextualStore(initialState: initialState)
+///         self.store = ContextualStore(initialState)
 ///     }
 /// }
 /// ```
@@ -46,7 +46,7 @@ import Foundation
 ///     let store: ContextualStore<AuthStoreState>
 ///
 ///     init(initialState: AuthStoreState) {
-///         self.store = ContextualStore(initialState: initialState)
+///         self.store = ContextualStore(initialState)
 ///     }
 /// }
 /// ```

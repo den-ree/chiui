@@ -5,7 +5,7 @@
 //  Created by Den Ree on 04/04/2025.
 //
 
-/// A protocol that defines the base requirements for all state types in the Chiui framework.
+/// A protocol that defines the base requirements for all state types in Chiui.
 ///
 /// All states in Chiui must conform to this protocol, which ensures they are:
 /// - Value types that can be compared for equality
@@ -148,32 +148,28 @@ public protocol ContextualViewState: ContextualState {
 /// ### Related Types
 ///
 /// - ``ContextualState``
-/// - ``ContextualStateEvent``
 public protocol ContextualAction: Equatable, Sendable {}
 
-/// A structure that represents a state change event with metadata.
+/// A structure that represents a view state change with metadata.
 ///
-/// `ContextualStateChange` tracks the lifecycle of state changes, including:
-/// - What triggered the change
-/// - The previous state
-/// - The new state
-/// - Whether it's an initial state
-/// - Whether the state actually changed
+/// `ContextualStateChange` tracks the lifecycle of a state mutation attempt, including:
+/// - The previous view state (`oldState`)
+/// - The proposed view state (`newState`)
+/// - Whether this is the first time the view state has been set (`isInitial`)
+/// - Whether the values actually changed (`hasChanged`)
 ///
 /// ## Overview
 ///
-/// State changes can be triggered by:
-/// - Initial store connection
-/// - Store updates
-/// - Local actions
+/// This type is used by [`ContextViewModel.updateState(_:)`](ContextViewModel/updateState(_:)) to provide
+/// enough context for follow-up side effects (analytics, async work, store synchronization, navigation, etc.).
 ///
 /// ## Usage
 ///
 /// ```swift
 /// let change = ContextualStateChange(
-///     trigger: .actionUpdate,
 ///     oldState: previousState,
-///     newState: currentState
+///     newState: currentState,
+///     isInitial: false
 /// )
 ///
 /// if change.hasChanged {
@@ -185,8 +181,6 @@ public protocol ContextualAction: Equatable, Sendable {}
 ///
 /// ### Essentials
 ///
-/// - ``Trigger``
-/// - ``trigger``
 /// - ``oldState``
 /// - ``newState``
 /// - ``isInitial``
@@ -205,11 +199,27 @@ public struct ContextualStateChange<State: ContextualState>: Equatable, Sendable
   public var hasChanged: Bool { oldState != newState }
 }
 
+/// A value returned by [`ContextViewModel.updateState(_:)`](ContextViewModel/updateState(_:))
+/// that enables chained, async follow-up work.
+///
+/// Chiui's state updates are unidirectional:
+/// `updateState` computes a `ContextualStateChange`, and `then` lets you run additional async work
+/// on the result (for example: syncing the store, calling services, or performing navigation).
 public struct ContextualStateSideEffect<State: ContextualState>: Sendable {
+  /// The computed state change (old/new/initial/changed).
   let change: ContextualStateChange<State>
 
+  /// Runs the provided block with the computed `ContextualStateChange`.
+  ///
+  /// - Important: This method executes on the main actor. If you only want to proceed when values
+  ///   actually changed, check `change.hasChanged` inside your block.
+  ///
+  /// - Parameter block: An async closure that receives the computed state change.
+  /// - Returns: `Void`.
   @MainActor
-  public func then(_ block: @escaping @MainActor (ContextualStateChange<State>) async -> Void) async -> Void {
+  public func then(
+    _ block: @escaping @MainActor (ContextualStateChange<State>) async -> Void
+  ) async -> Void {
     await block(change)
   }
 }

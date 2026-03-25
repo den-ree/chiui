@@ -1,10 +1,11 @@
 # ``Chiui``
 
-A modern state management solution for Swift applications with flexible side effects.
+Chiui: context-based unidirectional state management for SwiftUI
 
 ## Overview
 
-Chiui is a lightweight, type-safe state management library that provides unidirectional data flow with flexible side effect handling. It combines Swift's actor model with Combine to deliver predictable state management and reactive UI updates.
+Chiui is a lightweight, type-safe state management approach for SwiftUI that enforces unidirectional
+state flow using a context/store/view model.
 
 ## Core Components
 
@@ -19,14 +20,14 @@ Chiui is a lightweight, type-safe state management library that provides unidire
 
 - ``ContextualView`` - SwiftUI view wrapper with automatic store integration
 - ``ContextViewModel`` - Reactive view model with flexible side effects
-- ``StoreContext`` - Environment context for store access
-- ``ContextualStateSideEffect`` - Chainable side effect system
+- ``StoreContext`` - Context holder for the store dependency
+- ``ContextualStateSideEffect`` - Chainable async follow-up handle
 
 ## Key Features
 
 ### Flexible Side Effects
 
-Chiui's `then()` API provides powerful chaining for state updates:
+Chiui's `then(_:)` API provides async chaining for state updates:
 
 ```swift
 // Update state with side effects
@@ -35,9 +36,9 @@ viewModel.updateState { state in
     state.isLoading = true
 }.then { change in
     // Update global store
-    await context.store.update { storeState in
+    await context.store.update(state: { storeState in
         storeState.userProfile.name = change.newState.name
-    }
+    })
     
     // Track analytics
     analytics.track("name_updated", properties: [
@@ -48,20 +49,6 @@ viewModel.updateState { state in
     // Make API call
     await api.updateUserProfile(name: change.newState.name)
 }
-```
-
-### Synchronous Side Effects
-
-For immediate operations, use the `wait` variant:
-
-```swift
-viewModel.updateState { state in
-    state.isValid = isValidInput(state.input)
-}.then(wait: { change in
-    if change.newState.isValid {
-        await validateOnServer(change.newState.input)
-    }
-})
 ```
 
 ## Getting Started
@@ -116,9 +103,9 @@ final class ProfileViewModel: ContextViewModel<AppContext, ProfileViewState> {
             guard change.newState.validationError == nil else { return }
             
             // Update global state
-            await context.store.update { storeState in
+            await context.store.update(state: { storeState in
                 storeState.user?.name = change.newState.displayName
-            }
+            })
             
             // Save to backend
             await saveUserProfile(name: change.newState.displayName)
@@ -182,9 +169,9 @@ viewModel.updateState { state in
     analytics.track("selection_changed", count: change.newState.selectedItems.count)
     
     // Async store update
-    await context.store.update { storeState in
+    await context.store.update(state: { storeState in
         storeState.lastSelection = change.newState.selectedItems
-    }
+    })
 }
 ```
 

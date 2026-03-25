@@ -28,11 +28,14 @@ public protocol ContextualViewModel: ObservableObject {
 
 /// A base view model class that integrates with a store and manages state.
 ///
-/// `ContextViewModel` provides core functionality for:
+/// `ContextViewModel` provides core functionality for Chiui's context-based unidirectional state
+/// management in SwiftUI.
+///
+/// It implements:
 /// - Unidirectional data flow from store state to view state
 /// - Reactive updates when store state changes
 /// - Lifecycle management of subscriptions
-/// - Fluent state update API with chaining
+/// - Fluent local state update API with async chaining
 ///
 /// ## Overview
 ///
@@ -161,6 +164,8 @@ open class ContextViewModel<InjectedStoreContext: StoreContext, ViewState: Conte
   /// Updates the global store's state using a mutation block
   ///
   /// - Parameter block: A closure that modifies the store's state
+  ///
+  /// - Returns: A task that completes when the store update has been applied.
   @discardableResult
   public func updateStore(_ block: @escaping @Sendable (inout InjectedStoreContext.StoreState) -> Void) -> Task<Void, Never> {
     Task {
@@ -169,6 +174,16 @@ open class ContextViewModel<InjectedStoreContext: StoreContext, ViewState: Conte
   }
 
   @discardableResult
+  /// Mutates the view's local state by computing a `ContextualStateChange`.
+  ///
+  /// This method is unidirectional: it computes `oldState`/`newState`, updates `state` only when
+  /// values actually changed, and returns a side-effect handle you can chain with `then(_:)`.
+  ///
+  /// - Important: You can check `change.hasChanged` inside the `then` block to avoid performing
+  ///   work when the mutation does not actually change values.
+  ///
+  /// - Parameter block: A closure that mutates a copy of the current `ViewState`.
+  /// - Returns: A `ContextualStateSideEffect` that carries the computed state change.
   public func updateState(_ block: (inout ViewState) -> Void) -> ContextualStateSideEffect<ViewState> {
     let oldState = viewState
     var newState = viewState
@@ -184,6 +199,15 @@ open class ContextViewModel<InjectedStoreContext: StoreContext, ViewState: Conte
     return .init(change: change)
   }
 
+  /// Reads a scoped value from the current view state and performs async work with it.
+  ///
+  /// Use this when you need to snapshot derived data from `state` and do async work without
+  /// leaking `ViewState` mutations outside of the view model.
+  ///
+  /// - Parameters:
+  ///   - scopeBlock: Maps the current `ViewState` into a smaller value for the async work.
+  ///   - block: Async closure executed with the scoped value.
+  /// - Returns: `Void`.
   public func scopeState<T>(_ scopeBlock: @escaping (ViewState) -> T, _ block: @escaping (T) async -> Void) async -> Void {
     await block(scopeBlock(viewState))
   }
