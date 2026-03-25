@@ -2,20 +2,20 @@
 import PackageDescription
 
 let package = Package(
-    name: "Bindify",
+    name: "Chiui",
     platforms: [
         .iOS(.v16),
         .macOS(.v13)
     ],
     products: [
         .library(
-            name: "Bindify",
-            targets: ["Bindify"]),
+            name: "Chiui",
+            targets: ["Chiui"]),
     ],
     dependencies: [],
     targets: [
         .target(
-            name: "Bindify",
+            name: "Chiui",
             dependencies: [],
             swiftSettings: [
                 .enableUpcomingFeature("BareSlashRegexLiterals"),
@@ -27,7 +27,7 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "BindifyTests",
-            dependencies: ["Bindify"]),
+            name: "ChiuiTests",
+            dependencies: ["Chiui"]),
     ]
 ) 
