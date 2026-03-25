@@ -1,0 +1,216 @@
+//
+//  ContextualState.swift
+//  CIUA
+//
+//  Created by Den Ree on 04/04/2025.
+//
+
+/// A protocol that defines the base requirements for all state types in the CIUA framework.
+///
+/// All states in CIUA must conform to this protocol, which ensures they are:
+/// - Value types that can be compared for equality
+/// - Thread-safe for concurrent access
+///
+/// ## Overview
+///
+/// The `ContextualState` protocol serves as the foundation for all state management in CIUA.
+/// It enforces immutability and thread safety, which are crucial for predictable state management
+/// in a unidirectional data flow architecture.
+///
+/// ## Usage
+///
+/// ```swift
+/// struct UserState: ContextualState {
+///     let id: String
+///     let name: String
+///     let isActive: Bool
+/// }
+/// ```
+///
+/// ## Topics
+///
+/// ### Related Types
+///
+/// - ``ContextualStoreState``
+/// - ``ContextualViewState``
+public protocol ContextualState: Equatable & Sendable {}
+
+/// A protocol that defines the state for a store in CIUA.
+///
+/// The `ContextualStoreState` represents the source of truth for your application or feature.
+/// It should contain only the essential data that needs to be shared and persisted.
+///
+/// ## Overview
+///
+/// Store states should be:
+/// - Minimal and focused on core data
+/// - Serializable for persistence
+/// - Thread-safe for concurrent access
+///
+/// ## Usage
+///
+/// ```swift
+/// struct AppStoreState: ContextualStoreState {
+///     var user: User?
+///     var settings: Settings
+///     var isAuthenticated: Bool
+/// }
+/// ```
+///
+/// ## Topics
+///
+/// ### Related Types
+///
+/// - ``ContextualState``
+/// - ``ContextualViewState``
+public protocol ContextualStoreState: ContextualState {}
+
+/// A protocol that defines the state for a view in CIUA.
+///
+/// The `ContextualViewState` represents the UI-specific state that can be updated in two ways:
+/// 1. Derived from store state (for shared data)
+/// 2. Updated through actions (for local UI state)
+///
+/// ## Overview
+///
+/// View states should:
+/// - Contain both derived and local UI state
+/// - Be updated through actions in a unidirectional flow
+/// - Never be directly mutated outside of the view model
+/// - Have a default empty initializer
+///
+/// ## Usage
+///
+/// ```swift
+/// struct UserViewState: ContextualViewState {
+///     // Derived from store state
+///     var displayName: String
+///     var isOnline: Bool
+///
+///     // Local UI state
+///     var isEditing: Bool
+///     var selectedTab: Int
+///     var lastSeen: String
+///
+///     init() {
+///         self.displayName = ""
+///         self.isOnline = false
+///         self.isEditing = false
+///         self.selectedTab = 0
+///         self.lastSeen = ""
+///     }
+/// }
+/// ```
+///
+/// ## Topics
+///
+/// ### Essentials
+///
+/// - ``init()``
+///
+/// ### Related Types
+///
+/// - ``ContextualState``
+/// - ``ContextualStoreState``
+public protocol ContextualViewState: ContextualState {
+  /// Creates an empty state instance.
+  ///
+  /// This initializer is required to support state initialization before
+  /// any data is available from the store.
+  init()
+}
+
+/// A protocol that defines the base requirements for all action types in CIUA.
+///
+/// Actions in CIUA represent user interactions or system events that can trigger state changes.
+/// They must be:
+/// - Value types that can be compared for equality
+/// - Thread-safe for concurrent access
+///
+/// ## Overview
+///
+/// The `ContextualAction` protocol serves as the foundation for all actions in CIUA.
+/// It enforces immutability and thread safety, which are crucial for predictable state management
+/// in a unidirectional data flow architecture.
+///
+/// ## Usage
+///
+/// ```swift
+/// enum UserAction: ContextualAction {
+///     case updateName(String)
+///     case toggleActive
+///     case save
+/// }
+/// ```
+///
+/// ## Topics
+///
+/// ### Related Types
+///
+/// - ``ContextualState``
+/// - ``ContextualStateEvent``
+public protocol ContextualAction: Equatable, Sendable {}
+
+/// A structure that represents a state change event with metadata.
+///
+/// `ContextualStateChange` tracks the lifecycle of state changes, including:
+/// - What triggered the change
+/// - The previous state
+/// - The new state
+/// - Whether it's an initial state
+/// - Whether the state actually changed
+///
+/// ## Overview
+///
+/// State changes can be triggered by:
+/// - Initial store connection
+/// - Store updates
+/// - Local actions
+///
+/// ## Usage
+///
+/// ```swift
+/// let change = ContextualStateChange(
+///     trigger: .actionUpdate,
+///     oldState: previousState,
+///     newState: currentState
+/// )
+///
+/// if change.hasChanged {
+///     // Handle state update
+/// }
+/// ```
+///
+/// ## Topics
+///
+/// ### Essentials
+///
+/// - ``Trigger``
+/// - ``trigger``
+/// - ``oldState``
+/// - ``newState``
+/// - ``isInitial``
+/// - ``hasChanged``
+public struct ContextualStateChange<State: ContextualState>: Equatable, Sendable {
+  /// The state before the change occurred.
+  public let oldState: State
+
+  /// The state after the change occurred.
+  public let newState: State
+
+  /// Only true when the state has been updated first time
+  public let isInitial: Bool
+
+  /// Whether the state actually changed values.
+  public var hasChanged: Bool { oldState != newState }
+}
+
+public struct ContextualStateSideEffect<State: ContextualState>: Sendable {
+  let change: ContextualStateChange<State>
+
+  @MainActor
+  public func then(_ block: @escaping @MainActor (ContextualStateChange<State>) async -> Void) async -> Void {
+    await block(change)
+  }
+}
+
