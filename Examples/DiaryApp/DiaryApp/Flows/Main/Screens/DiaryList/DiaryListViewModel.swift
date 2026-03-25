@@ -1,5 +1,5 @@
 import Foundation
-import CIUA
+import Chiui
 import SwiftUI
 
 /// View model for the diary list screen

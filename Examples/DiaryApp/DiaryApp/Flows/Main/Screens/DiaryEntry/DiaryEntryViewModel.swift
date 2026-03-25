@@ -1,5 +1,5 @@
 import Foundation
-import CIUA
+import Chiui
 import SwiftUI
 
 final class DiaryEntryViewModel: ContextViewModel<DiaryContext, DiaryEntryViewModel.State> {

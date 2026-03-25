@@ -1,5 +1,5 @@
 import SwiftUI
-import CIUA
+import Chiui
 
 /// View for displaying the list of diary entries
 struct DiaryListView: ContextualView {

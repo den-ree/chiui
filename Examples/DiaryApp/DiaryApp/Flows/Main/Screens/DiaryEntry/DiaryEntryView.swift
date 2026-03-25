@@ -1,5 +1,5 @@
 import SwiftUI
-import CIUA
+import Chiui
 
 /// View for adding a new diary entry
 struct DiaryEntryView: ContextualView {

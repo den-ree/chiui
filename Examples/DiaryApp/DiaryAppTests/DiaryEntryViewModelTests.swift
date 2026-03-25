@@ -1,6 +1,6 @@
 import XCTest
 @testable import DiaryApp
-@testable import CIUA
+@testable import Chiui
 
 final class DiaryEntryViewModelTests: XCTestCase {
   var sut: DiaryEntryViewModel!

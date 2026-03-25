@@ -1,5 +1,5 @@
 import Foundation
-import CIUA
+import Chiui
 
 /// Context for managing diary state and actions
 final class DiaryContext: StoreContext {

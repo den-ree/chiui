@@ -1,5 +1,5 @@
 import Foundation
-import CIUA
+import Chiui
 
 /// Represents the global state of the diary application
 struct DiaryStoreState: ContextualStoreState {
