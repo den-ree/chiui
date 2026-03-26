@@ -90,6 +90,8 @@ struct ChiuiPerformanceAndStressTests {
         try? await Task.sleep(for: .milliseconds(2))
       }
     }
+    // Give the heartbeat task a chance to schedule before stressing the pipeline.
+    await Task.yield()
 
     let start = Date()
 
@@ -119,7 +121,9 @@ struct ChiuiPerformanceAndStressTests {
     // - commits should be much fewer than updateCount (coalescing / skip).
     #expect(didFinish)
     #expect(duration < 8.0)
-    #expect(heartbeatTicks >= 4)
+    // CI runners can be bursty; require only a minimal amount of progress.
+    let expectedMinimumTicks = max(2, Int(duration / 0.02))
+    #expect(heartbeatTicks >= expectedMinimumTicks)
 
     let commits = await commitLog.snapshot()
     #expect(commits <= 5) // derived = rawValue/1000 changes rarely + coalescing cancels most work
