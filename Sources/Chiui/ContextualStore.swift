@@ -1,6 +1,6 @@
 //
-//  BindifyStore.swift
-//  Bindify
+//  ContextualStore.swift
+//  Chiui
 //
 //  Created by Den Ree on 04/04/2025.
 //
@@ -9,7 +9,7 @@
 
 /// An actor that manages application state with thread-safe access and change notifications.
 ///
-/// `BindifyStore` serves as the source of truth in the data flow architecture.
+/// `ContextualStore` serves as the source of truth in the data flow architecture.
 /// It manages state and notifies subscribers of any changes, ensuring thread safety through
 /// the actor model.
 ///
@@ -24,7 +24,7 @@
 ///
 /// ```swift
 /// // Create a store
-/// let store = BindifyStore(AppStoreState())
+/// let store = ContextualStore(AppStoreState())
 ///
 /// // Subscribe to changes
 /// let subscription = await store.subscribe { old, new in
@@ -52,8 +52,8 @@
 ///
 /// ### Related Types
 ///
-/// - ``BindifyStoreState``
-public actor BindifyStore<State: BindifyStoreState> {
+/// - ``ContextualStoreState``
+public actor ContextualStore<State: ContextualStoreState> {
   /// The current state of the store.
   ///
   /// This property is actor-isolated, ensuring thread-safe access to the state.
@@ -75,7 +75,7 @@ public actor BindifyStore<State: BindifyStoreState> {
 }
 
 /// Supporting updates and subscription methods
-extension BindifyStore {
+extension ContextualStore {
   /// Subscribes to state updates from the store.
   ///
   /// This method establishes a reactive connection between the store and subscribers.
@@ -95,16 +95,11 @@ extension BindifyStore {
   ///
   /// - Parameter updates: A closure that receives the old and new state. The old state will be `nil` for the initial update.
   /// - Returns: A cancellable subscription object that should be retained to keep the subscription active.
-  @MainActor
-  func subscribe(updates: @escaping ((old: State?, new: State)) -> Void) async -> AnyCancellable {
-    let result = await changesSubject.sink(receiveValue: { old, new in
+  func subscribe(updates: @escaping @Sendable ((old: State?, new: State)) -> Void) -> AnyCancellable {
+    let result = changesSubject.sink { old, new in
       updates((old: old, new: new))
-    })
-
-    // Send initial state
-    let currentState = await state
-    updates((nil, currentState))
-
+    }
+    updates((nil, state))
     return result
   }
 
@@ -123,7 +118,7 @@ extension BindifyStore {
   /// ```
   ///
   /// - Parameter block: A closure that modifies the current state. The state is passed as an `inout` parameter.
-  public func update(state block: (inout State) -> Void) {
+  public func update(state block: @Sendable (inout State) -> Void) {
     let oldState = state
     block(&state)
 
@@ -132,4 +127,3 @@ extension BindifyStore {
     }
   }
 }
-

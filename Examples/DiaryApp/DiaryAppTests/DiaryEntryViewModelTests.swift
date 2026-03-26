@@ -1,6 +1,6 @@
 import XCTest
 @testable import DiaryApp
-@testable import Bindify
+@testable import Chiui
 
 final class DiaryEntryViewModelTests: XCTestCase {
   var sut: DiaryEntryViewModel!
@@ -195,4 +195,4 @@ final class DiaryEntryViewModelTests: XCTestCase {
     XCTAssertEqual(sut.viewState.content, "")
     XCTAssertTrue(sut.viewState.shouldDismiss)
   }
-} 
+}

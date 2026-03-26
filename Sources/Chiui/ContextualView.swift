@@ -1,6 +1,6 @@
 //
-//  BindifyView.swift
-//  Bindify
+//  ContextualView.swift
+//  Chiui
 //
 //  Created by Den Ree on 04/04/2025.
 //
@@ -9,22 +9,23 @@ import SwiftUI
 
 /// A protocol that defines a base view with an associated view model for state management.
 ///
-/// `BindifyView` provides a structured way to create views that are bound to a view model,
-/// enabling a clean separation between UI and business logic. The view model transforms
-/// store state into view-specific state and handles user actions.
+/// `ContextualView` provides a structured way to create views bound to a view model,
+/// enabling a clean separation between UI and business logic.
+///
+/// The view model owns the state (derived from `ContextualStore`) and the view wires SwiftUI
+/// controls to that state via helpers like `bindTo`.
 ///
 /// ## Overview
 ///
 /// The protocol provides:
 /// - Type-safe view model association
 /// - Automatic state binding
-/// - Action dispatching
 /// - Two-way binding utilities
 ///
 /// ## Usage
 ///
 /// ```swift
-/// struct UserProfileView: BindifyView {
+/// struct UserProfileView: ContextualView {
 ///     @StateObject var viewModel: UserProfileViewModel
 ///
 ///     init(_ context: AppContext) {
@@ -34,12 +35,14 @@ import SwiftUI
 ///     var body: some View {
 ///         Form {
 ///             Section(header: Text("Profile")) {
-///                 TextField("Name", text: bindTo(\.name) { .updateName($0) })
-///                 TextField("Email", text: bindTo(\.email) { .updateEmail($0) })
+///                 TextField("Name", text: bindTo(\.name) { viewModel.updateName($0) })
+///                 TextField("Email", text: bindTo(\.email) { viewModel.updateEmail($0) })
 ///             }
 ///
 ///             Section {
-///                 Button("Save") { onAction(.save) }
+///                 Button("Save") {
+///                     viewModel.save()
+///                 }
 ///                     .disabled(state.isSavingDisabled)
 ///             }
 ///         }
@@ -54,36 +57,37 @@ import SwiftUI
 ///
 /// - ``StoreContext``
 /// - ``ViewState``
-/// - ``Action``
 /// - ``ViewModel``
 /// - ``viewModel``
 ///
 /// ### State Management
 ///
 /// - ``state``
-/// - ``onAction(_:)``
 /// - ``bindTo(_:action:)``
 ///
 /// ### Related Types
 ///
-/// - ``BindifyContext``
-/// - ``BindifyViewState``
-/// - ``BindifyViewModel``
-public protocol BindifyView: View {
+/// - ``StoreContext``
+/// - ``ContextualViewState``
+/// - ``ContextualViewModel``
+public protocol ContextualView: View {
   /// The type of context that provides access to the store.
-  associatedtype StoreContext: BindifyContext
+  associatedtype InjectedStoreContext: StoreContext
 
   /// The type of state used by this view.
-  associatedtype ViewState: BindifyViewState
+  associatedtype ViewState: ContextualViewState
 
   /// The type of view model that manages this view's state and actions.
-  associatedtype ViewModel: BindifiableViewModel where ViewModel.ViewState == ViewState, ViewModel.StoreContext == StoreContext
+  associatedtype ViewModel: ContextualViewModel
+  where
+    ViewModel.ViewState == ViewState,
+    ViewModel.InjectedStoreContext == InjectedStoreContext
 
   /// The view model instance that drives this view's behavior and state.
   var viewModel: ViewModel { get }
 }
 
-public extension BindifyView where ViewModel: BindifyViewModel<StoreContext, ViewState> {
+public extension ContextualView where ViewModel: ContextViewModel<InjectedStoreContext, ViewState> {
   /// Provides access to the view's current state.
   ///
   /// This computed property gives the view read-only access to the state
@@ -103,7 +107,18 @@ public extension BindifyView where ViewModel: BindifyViewModel<StoreContext, Vie
     viewModel.viewState
   }
 
-  @MainActor func bindTo<T>(_ keyPath: WritableKeyPath<ViewState, T>, action onSet: @escaping (T) -> Void) -> Binding<T> {
+  /// Creates a two-way `Binding` to a specific property inside `ViewState`.
+  ///
+  /// - Parameters:
+  ///   - keyPath: The property in `ViewState` to bind.
+  ///   - onSet: Called whenever SwiftUI writes a new value into the binding.
+  ///            In practice, this usually forwards to a view-model method that mutates
+  ///            state via `updateState(_:)`.
+  /// - Returns: A `Binding` that reads from `state` and forwards updates to `onSet`.
+  @MainActor func bindTo<T>(
+    _ keyPath: WritableKeyPath<ViewState, T>,
+    action onSet: @escaping (T) -> Void
+  ) -> Binding<T> {
     Binding(
       get: { state[keyPath: keyPath] },
       set: { newValue in
@@ -112,4 +127,3 @@ public extension BindifyView where ViewModel: BindifyViewModel<StoreContext, Vie
     )
   }
 }
-

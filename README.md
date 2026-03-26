@@ -1,6 +1,13 @@
-# Bindify
+# Chiui
 
-A modern state management solution for Swift applications.
+Chiui: context-based unidirectional state management for SwiftUI
+
+![CI](https://github.com/den-ree/swift-ciua/actions/workflows/ci.yml/badge.svg)
+![Release](https://github.com/den-ree/swift-ciua/actions/workflows/release.yml/badge.svg)
+
+![Chiui logo](assets/icon.png)
+
+Effective, context-first state updates for SwiftUI, designed for Swift 6 concurrency readiness and unidirectional UI architecture.
 
 ## Features
 
@@ -24,13 +31,13 @@ Add the following to your `Package.swift` file:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/den-ree/Bindify", branch: "main")
+    .package(url: "https://github.com/den-ree/swift-ciua", from: "1.0.0")
 ]
 ```
 
 ## Usage
 
-Bindify enables a clean separation of local (view) state and global (store) state, with support for side effects. Here are the recommended patterns:
+Chiui enables a clean separation of local (view) state and global (store) state, with support for side effects. Here are the recommended patterns:
 
 ### 1. Update Local View State
 
@@ -60,23 +67,23 @@ func selectEntry(_ entry: Entry) {
 
 ### 3. Combine State Update and Store Update with Side Effects
 
-Chain `.sideEffect` after `updateState` to perform async work or update the store in response to a local state change:
+Chain `.then(_:)` after `updateState` to perform async work and update the store in response to a local state change:
 
 ```swift
 @MainActor
-func finishEditing(save: Bool) {
+func finishEditing(save: Bool) async {
     guard save else {
-        updateState { state in
-            state.isEditing = false
-        }.sideEffect { [weak self] _ in
+        await updateState { state in
+          state.isEditing = false
+        }.then { [weak self] _ in
             self?.updateStore { $0.selectedEntry = nil }
         }
         return
     }
 
-    updateState { state in
+    await updateState { state in
         state.savingStatus = .saving
-    }.sideEffect { [weak self] change in
+    }.then { [weak self] change in
         guard let self, change.hasChanged else { return }
         // Simulate async save
         try? await Task.sleep(for: .seconds(2))
@@ -87,23 +94,25 @@ func finishEditing(save: Bool) {
 
 ### 4. Get State for Store Update
 
-Use `sideEffect` to access the latest local state and then update the store. This is useful when you need to synchronize the store with the most recent view state, for example after a user action or form submission.
+Use `scopeState` to snapshot the latest view state and then update the store. This is useful when you need to synchronize the store with the most recent view state, for example after a user action or form submission.
 
 ```swift
 @MainActor
-func finishEditing(save: Bool) {
-   sideEffect { [weak self] state in 
-        self.updateStore { $0.selectedEntry = state.entry }
+func finishEditing() {
+  Task {
+    await scopeState({ $0 }) { [weak self] state in
+      self?.updateStore { $0.selectedEntry = state.entry }
     }
+  }
 }
 ```
 
 ### 5. Use in SwiftUI Views
 
-BindifyView provides helpers for binding state and dispatching actions:
+ContextualView provides helpers for binding view state to SwiftUI controls:
 
 ```swift
-struct EntryView: BindifyView {
+struct EntryView: ContextualView {
     @StateObject var viewModel: EntryViewModel
     // ...
     var body: some View {
@@ -122,7 +131,20 @@ For detailed documentation, including:
 - Testing guidelines
 - Advanced usage examples
 
-Please visit our [Documentation](Sources/Bindify/Bindify.docc/Documentation.md).
+Please visit our [Documentation](Sources/Chiui/Chiui.docc/Documentation.md).
+
+Hosted DocC can be published with the `Publish DocC` workflow to GitHub Pages.
+
+## Why Chiui
+
+- Local view state and global store state are clearly separated.
+- Async side effects are explicit and chainable through `then(_:)`.
+- Store to view mapping is centralized in `didStoreUpdate(_:)`.
+- Works naturally with SwiftUI via `ContextualView` bindings.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development and PR guidance.
 
 ## License
 

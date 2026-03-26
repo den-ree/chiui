@@ -1,8 +1,8 @@
 import SwiftUI
-import Bindify
+import Chiui
 
 /// View for adding a new diary entry
-struct DiaryEntryView: BindifyView {
+struct DiaryEntryView: ContextualView {
   /// View model for adding diary entries
   @StateObject var viewModel: DiaryEntryViewModel
   /// Environment presentation mode for dismissing the view
@@ -22,65 +22,66 @@ struct DiaryEntryView: BindifyView {
   }
 
   var body: some View {
-    NavigationView {
-      ZStack {
-        Form {
-          Section(header: Text("Title")) {
-            TextField("Enter title", text: bindTo(\.title) { viewModel.updateTitle($0) })
-            .focused($focusedField, equals: .title)
-            .onChange(of: focusedField) { oldValue, newValue in
-              if newValue == .title {
-                viewModel.startEditing()
+    ZStack {
+      Form {
+        Section(header: Text("Title")) {
+          TextField("Enter title", text: bindTo(\.title) { viewModel.updateTitle($0) })
+          .focused($focusedField, equals: .title)
+          .onChange(of: focusedField) { _, newValue in
+            if newValue == .title {
+              viewModel.startEditing()
+            }
+          }
+        }
+
+        Section(header: Text("Content")) {
+          TextEditor(text: bindTo(\.content) { viewModel.updateContent($0) })
+          .frame(minHeight: 200)
+          .focused($focusedField, equals: .content)
+          .onChange(of: focusedField) { _, newValue in
+            if newValue == .content {
+              viewModel.startEditing()
+            }
+          }
+        }
+      }
+      .navigationTitle(state.entryTitle)
+      .toolbar {
+        if state.isEditing {
+          ToolbarItem(placement: .navigationBarLeading) {
+            Button("Cancel") {
+              focusedField = nil
+              Task {
+                await viewModel.finishEditing(save: false)
               }
             }
           }
 
-          Section(header: Text("Content")) {
-            TextEditor(text: bindTo(\.content) { viewModel.updateContent($0) })
-            .frame(minHeight: 200)
-            .focused($focusedField, equals: .content)
-            .onChange(of: focusedField) { oldValue, newValue in
-              if newValue == .content {
-                viewModel.startEditing()
+          ToolbarItem(placement: .navigationBarTrailing) {
+            Button("Save") {
+              focusedField = nil
+              Task {
+                await viewModel.finishEditing(save: true)
               }
             }
+            .disabled(state.isSavingDisabled)
           }
         }
-        .navigationTitle(state.entryTitle)
-        .toolbar {
-          if state.isEditing {
-            ToolbarItem(placement: .navigationBarLeading) {
-              Button("Cancel") {
-                focusedField = nil
-                viewModel.finishEditing(save: false)
-              }
-            }
+      }
+      .onChange(of: state.shouldDismiss) { _, newValue in
+        if newValue {
+          presentationMode.wrappedValue.dismiss()
+        }
+      }
 
-            ToolbarItem(placement: .navigationBarTrailing) {
-              Button("Save") {
-                focusedField = nil
-                viewModel.finishEditing(save: true)
-              }
-              .disabled(state.isSavingDisabled)
-            }
-          }
-        }
-        .onChange(of: state.shouldDismiss) { oldValue, newValue in
-          if newValue {
-            presentationMode.wrappedValue.dismiss()
-          }
-        }
+      if state.savingStatus == .saving {
+        Color.black.opacity(0.2)
+          .ignoresSafeArea()
 
-        if state.savingStatus == .saving {
-          Color.black.opacity(0.2)
-            .ignoresSafeArea()
-          
-          ProgressView()
-            .scaleEffect(1.5)
-            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-        }
+        ProgressView()
+          .scaleEffect(1.5)
+          .progressViewStyle(CircularProgressViewStyle(tint: .white))
       }
     }
   }
 }
-

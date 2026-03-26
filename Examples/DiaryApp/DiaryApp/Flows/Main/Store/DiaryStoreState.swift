@@ -1,8 +1,8 @@
 import Foundation
-import Bindify
+import Chiui
 
 /// Represents the global state of the diary application
-struct DiaryStoreState: BindifyStoreState {
+struct DiaryStoreState: ContextualStoreState {
   /// Collection of all diary entries
   var entries: [DiaryEntry] = []
   var entrySelectionMode: EntrySelectionMode = .no
@@ -37,4 +37,3 @@ enum DiaryAction: Equatable {
   /// Update an existing diary entry
   case updateEntry(DiaryEntry)
 }
-
