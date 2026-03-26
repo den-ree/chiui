@@ -147,11 +147,11 @@ struct ContextViewModelTests {
     // Start scopeState work, then mutate the view state after the snapshot is captured
     // but before we allow the async block to publish the snapshot.
     let task = Task {
-      await viewModel.scopeState({ $0.value }) { snapshot in
+      await viewModel.scopeState({ $0.value }, { snapshot in
         await captureSignal.set(snapshot)
         await gate.wait()
         await box.set(snapshot)
-      }
+      })
     }
 
     #expect(await TestUtils.waitUntil(timeout: .seconds(1)) {
@@ -176,9 +176,9 @@ struct ContextViewModelTests {
       await MainActor.run { viewModel.viewState.value == -1 }
     })
 
-    for i in 1...5 {
+    for index in 1...5 {
       await context.store.update { state in
-        state.value = i
+        state.value = index
       }
     }
 

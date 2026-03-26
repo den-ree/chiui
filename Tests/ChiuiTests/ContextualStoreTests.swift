@@ -14,18 +14,6 @@ struct ContextualStoreTests {
     }
   }
 
-  actor UpdateCollector {
-    typealias Update = (old: TestState?, new: TestState)
-    private(set) var updates: [Update] = []
-
-    func append(old: TestState?, new: TestState) {
-      updates.append((old: old, new: new))
-    }
-
-    func snapshot() -> [Update] { updates }
-    func count() -> Int { updates.count }
-  }
-
   @Test("Subscribe immediately emits initial state")
   func testSubscribeSendsInitialState() async throws {
     let store = ContextualStore(TestState(count: 5, isEnabled: true))
@@ -94,9 +82,9 @@ struct ContextualStoreTests {
     }
 
     let updateCount = 5
-    for i in 1...updateCount {
+    for index in 1...updateCount {
       await store.update { state in
-        state.count = i
+        state.count = index
       }
     }
 
@@ -142,11 +130,11 @@ struct ContextualStoreTests {
     let updateCount = 100
 
     // Each update uses a unique value, so every update should result in a notification.
-    for i in 0..<updateCount {
+    for index in 0..<updateCount {
       Task {
         await store.update { state in
-          state.count = i
-          state.isEnabled = (i % 2 == 0)
+          state.count = index
+          state.isEnabled = (index % 2 == 0)
         }
       }
     }
@@ -164,4 +152,16 @@ struct ContextualStoreTests {
 
     subscription.cancel()
   }
+}
+
+private actor UpdateCollector {
+  typealias Update = (old: ContextualStoreTests.TestState?, new: ContextualStoreTests.TestState)
+  private(set) var updates: [Update] = []
+
+  func append(old: ContextualStoreTests.TestState?, new: ContextualStoreTests.TestState) {
+    updates.append((old: old, new: new))
+  }
+
+  func snapshot() -> [Update] { updates }
+  func count() -> Int { updates.count }
 }

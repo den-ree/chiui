@@ -78,7 +78,10 @@ public protocol ContextualView: View {
   associatedtype ViewState: ContextualViewState
 
   /// The type of view model that manages this view's state and actions.
-  associatedtype ViewModel: ContextualViewModel where ViewModel.ViewState == ViewState, ViewModel.InjectedStoreContext == InjectedStoreContext
+  associatedtype ViewModel: ContextualViewModel
+  where
+    ViewModel.ViewState == ViewState,
+    ViewModel.InjectedStoreContext == InjectedStoreContext
 
   /// The view model instance that drives this view's behavior and state.
   var viewModel: ViewModel { get }

@@ -113,7 +113,7 @@ open class ContextViewModel<InjectedStoreContext: StoreContext, ViewState: Conte
     self.viewState = .init()
 
     connectTask = Task { [weak self] in
-      let subscription = await context.store.subscribe { [weak self] (_: InjectedStoreContext.StoreState?, new: InjectedStoreContext.StoreState) in
+      let subscription = await context.store.subscribe { [weak self] _, new in
         Task { @MainActor [weak self] in
           self?.storeUpdateTask?.cancel()
           self?.storeUpdateTask = Task { [weak self] in
@@ -167,7 +167,9 @@ open class ContextViewModel<InjectedStoreContext: StoreContext, ViewState: Conte
   ///
   /// - Returns: A task that completes when the store update has been applied.
   @discardableResult
-  public func updateStore(_ block: @escaping @Sendable (inout InjectedStoreContext.StoreState) -> Void) -> Task<Void, Never> {
+  public func updateStore(
+    _ block: @escaping @Sendable (inout InjectedStoreContext.StoreState) -> Void
+  ) -> Task<Void, Never> {
     Task {
       await context.store.update(state: block)
     }

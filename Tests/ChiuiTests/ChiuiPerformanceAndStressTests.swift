@@ -53,8 +53,8 @@ private final class LargeCoalescingViewModel: ContextViewModel<LargeTestContext,
     // This runs before hopping back to MainActor via updateState.
     var checksum = 0
     for _ in 0..<120 {
-      for v in storeState.payload {
-        checksum &+= v
+      for payloadValue in storeState.payload {
+        checksum &+= payloadValue
       }
       if Task.isCancelled { return }
     }
@@ -94,11 +94,11 @@ struct ChiuiPerformanceAndStressTests {
     let start = Date()
 
     // Rapid store churn.
-    for i in 0..<updateCount {
+    for index in 0..<updateCount {
       await context.store.update { state in
-        state.rawValue = i
+        state.rawValue = index
         // Replace payload with a new value to force equality checks to do real work.
-        state.payload = Array(repeating: i, count: payloadSize)
+        state.payload = Array(repeating: index, count: payloadSize)
       }
     }
 
