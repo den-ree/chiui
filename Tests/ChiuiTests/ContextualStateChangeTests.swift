@@ -50,4 +50,3 @@ struct ContextualStateChangeTests {
     #expect(received?.isInitial == false)
   }
 }
-

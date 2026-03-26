@@ -17,4 +17,3 @@ final class DiaryLoadingClient {
     try? await Task.sleep(for: .seconds(2))
   }
 }
-

@@ -81,4 +81,3 @@ public protocol StoreContext: Sendable {
   /// the unidirectional data flow pattern.
   var store: ContextualStore<StoreState> { get }
 }
-

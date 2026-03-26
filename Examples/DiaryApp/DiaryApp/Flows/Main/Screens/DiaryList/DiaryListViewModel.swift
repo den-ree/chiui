@@ -74,7 +74,7 @@ final class DiaryListViewModel: ContextViewModel<DiaryContext, DiaryListViewMode
     Task {
       await scopeState({ $0 }) { [weak self] state in
         let entry = state.entry(at: index)
-        
+
         self?.updateStore { storeState in
           storeState.entries.removeAll { $0.id == entry.id }
         }
@@ -94,4 +94,3 @@ final class DiaryListViewModel: ContextViewModel<DiaryContext, DiaryListViewMode
     }
   }
 }
-

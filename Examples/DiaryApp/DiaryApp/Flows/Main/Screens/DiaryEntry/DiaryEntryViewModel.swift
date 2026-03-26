@@ -132,12 +132,10 @@ final class DiaryEntryViewModel: ContextViewModel<DiaryContext, DiaryEntryViewMo
     await updateState { state in
       state.savingStatus = .saved
       state.isEditing = false
-    }.then {  [weak self] change in
+    }.then {  [weak self] _ in
       self?.updateStore { storeState in
         storeState.entrySelectionMode = .no
       }
     }
   }
 }
-
-

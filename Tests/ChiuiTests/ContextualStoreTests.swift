@@ -165,4 +165,3 @@ struct ContextualStoreTests {
     subscription.cancel()
   }
 }
-

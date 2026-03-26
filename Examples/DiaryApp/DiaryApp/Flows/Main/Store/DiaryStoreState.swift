@@ -37,4 +37,3 @@ enum DiaryAction: Equatable {
   /// Update an existing diary entry
   case updateEntry(DiaryEntry)
 }
-

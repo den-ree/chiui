@@ -8,7 +8,6 @@ struct ChiuiTestStoreState: ContextualStoreState {
 
 struct ChiuiTestViewState: ContextualViewState {
   var value: Int = 0
-  init() {}
 }
 
 struct ChiuiTestContext: StoreContext {
@@ -197,4 +196,3 @@ struct ContextViewModelTests {
   // Note: "didStoreUpdate doesn't block UI" is covered in the dedicated
   // performance test via a main-actor heartbeat.
 }
-

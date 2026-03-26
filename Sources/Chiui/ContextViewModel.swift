@@ -113,7 +113,7 @@ open class ContextViewModel<InjectedStoreContext: StoreContext, ViewState: Conte
     self.viewState = .init()
 
     connectTask = Task { [weak self] in
-      let subscription = await context.store.subscribe { [weak self] (old: InjectedStoreContext.StoreState?, new: InjectedStoreContext.StoreState) in
+      let subscription = await context.store.subscribe { [weak self] (_: InjectedStoreContext.StoreState?, new: InjectedStoreContext.StoreState) in
         Task { @MainActor [weak self] in
           self?.storeUpdateTask?.cancel()
           self?.storeUpdateTask = Task { [weak self] in
@@ -208,7 +208,7 @@ open class ContextViewModel<InjectedStoreContext: StoreContext, ViewState: Conte
   ///   - scopeBlock: Maps the current `ViewState` into a smaller value for the async work.
   ///   - block: Async closure executed with the scoped value.
   /// - Returns: `Void`.
-  public func scopeState<T>(_ scopeBlock: @escaping (ViewState) -> T, _ block: @escaping (T) async -> Void) async -> Void {
+  public func scopeState<T>(_ scopeBlock: @escaping (ViewState) -> T, _ block: @escaping (T) async -> Void) async {
     await block(scopeBlock(viewState))
   }
 
@@ -222,4 +222,3 @@ open class ContextViewModel<InjectedStoreContext: StoreContext, ViewState: Conte
     cancelable.store(in: &cancellables)
   }
 }
-

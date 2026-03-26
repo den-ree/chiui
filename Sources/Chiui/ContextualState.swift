@@ -189,8 +189,7 @@ public struct ContextualStateSideEffect<State: ContextualState>: Sendable {
   @MainActor
   public func then(
     _ block: @escaping @MainActor (ContextualStateChange<State>) async -> Void
-  ) async -> Void {
+  ) async {
     await block(change)
   }
 }
-

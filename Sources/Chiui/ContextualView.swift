@@ -124,4 +124,3 @@ public extension ContextualView where ViewModel: ContextViewModel<InjectedStoreC
     )
   }
 }
-

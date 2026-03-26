@@ -9,7 +9,6 @@ private struct BindingTestStoreState: ContextualStoreState {
 
 private struct BindingTestViewState: ContextualViewState {
   var title: String = ""
-  init() {}
 }
 
 private struct BindingTestContext: StoreContext {
@@ -61,4 +60,3 @@ struct ContextualViewBindingTests {
     #expect(binding.wrappedValue == "Hello")
   }
 }
-

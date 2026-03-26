@@ -14,7 +14,6 @@ private struct LargeStoreState: ContextualStoreState {
 
 private struct LargeViewState: ContextualViewState {
   var derived: Int = 0
-  init() {}
 }
 
 private struct LargeTestContext: StoreContext {
@@ -126,4 +125,3 @@ struct ChiuiPerformanceAndStressTests {
     #expect(commits <= 5) // derived = rawValue/1000 changes rarely + coalescing cancels most work
   }
 }
-

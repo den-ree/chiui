@@ -27,7 +27,7 @@ struct DiaryEntryView: ContextualView {
         Section(header: Text("Title")) {
           TextField("Enter title", text: bindTo(\.title) { viewModel.updateTitle($0) })
           .focused($focusedField, equals: .title)
-          .onChange(of: focusedField) { oldValue, newValue in
+          .onChange(of: focusedField) { _, newValue in
             if newValue == .title {
               viewModel.startEditing()
             }
@@ -38,7 +38,7 @@ struct DiaryEntryView: ContextualView {
           TextEditor(text: bindTo(\.content) { viewModel.updateContent($0) })
           .frame(minHeight: 200)
           .focused($focusedField, equals: .content)
-          .onChange(of: focusedField) { oldValue, newValue in
+          .onChange(of: focusedField) { _, newValue in
             if newValue == .content {
               viewModel.startEditing()
             }
@@ -68,7 +68,7 @@ struct DiaryEntryView: ContextualView {
           }
         }
       }
-      .onChange(of: state.shouldDismiss) { oldValue, newValue in
+      .onChange(of: state.shouldDismiss) { _, newValue in
         if newValue {
           presentationMode.wrappedValue.dismiss()
         }
@@ -85,4 +85,3 @@ struct DiaryEntryView: ContextualView {
     }
   }
 }
-
