@@ -2,8 +2,8 @@
 
 Context-based unidirectional state management for SwiftUI
 
-![CI](https://github.com/den-ree/swift-ciua/actions/workflows/ci.yml/badge.svg)
-![Release](https://github.com/den-ree/swift-ciua/actions/workflows/release.yml/badge.svg)
+![CI](https://github.com/den-ree/chiui/actions/workflows/ci.yml/badge.svg)
+![Release](https://github.com/den-ree/chiui/actions/workflows/release.yml/badge.svg)
 
 Effective, context-first state updates for SwiftUI, designed for Swift 6 concurrency readiness and unidirectional UI architecture.
 
@@ -29,7 +29,7 @@ Add the following to your `Package.swift` file:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/den-ree/swift-ciua", from: "1.0.0")
+    .package(url: "https://github.com/den-ree/chiui", from: "1.0.0")
 ]
 ```
 

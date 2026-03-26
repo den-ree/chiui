@@ -38,7 +38,7 @@ jobs:
           ARCHIVE_PATH="$(find .derivedData -name 'Chiui.doccarchive' | head -n 1)"
           xcrun docc process-archive transform-for-static-hosting "$ARCHIVE_PATH" \
             --output-path docs \
-            --hosting-base-path swift-ciua
+            --hosting-base-path chiui
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
