@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		774570BB2DDD0216004AB32E /* Chiui in Frameworks */ = {isa = PBXBuildFile; productRef = 774570BA2DDD0216004AB32E /* Chiui */; };
+		77BF54992F7579CE00E1D60D /* Chiui in Frameworks */ = {isa = PBXBuildFile; productRef = 77BF54982F7579CE00E1D60D /* Chiui */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,6 +58,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				774570BB2DDD0216004AB32E /* Chiui in Frameworks */,
+				77BF54992F7579CE00E1D60D /* Chiui in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -118,6 +120,7 @@
 			name = DiaryApp;
 			packageProductDependencies = (
 				774570BA2DDD0216004AB32E /* Chiui */,
+				77BF54982F7579CE00E1D60D /* Chiui */,
 			);
 			productName = DiaryApp;
 			productReference = 774570542DDCFF04004AB32E /* DiaryApp.app */;
@@ -202,7 +205,7 @@
 			mainGroup = 7745704B2DDCFF04004AB32E;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				774570B92DDD0216004AB32E /* XCLocalSwiftPackageReference "../../../CIUA" */,
+				77BF54972F7579CE00E1D60D /* XCLocalSwiftPackageReference "../../../Chiui" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 774570552DDCFF04004AB32E /* Products */;
@@ -594,14 +597,18 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		774570B92DDD0216004AB32E /* XCLocalSwiftPackageReference "../../../CIUA" */ = {
+		77BF54972F7579CE00E1D60D /* XCLocalSwiftPackageReference "../../../Chiui" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ../../../CIUA;
+			relativePath = ../../../Chiui;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		774570BA2DDD0216004AB32E /* Chiui */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Chiui;
+		};
+		77BF54982F7579CE00E1D60D /* Chiui */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Chiui;
 		};

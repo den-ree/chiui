@@ -1,11 +1,9 @@
-# Chiui
+<h1><img src="assets/icon.png" alt="Chiui logo" width="28" /> Chiui</h1>
 
-Chiui: context-based unidirectional state management for SwiftUI
+Context-based unidirectional state management for SwiftUI
 
 ![CI](https://github.com/den-ree/swift-ciua/actions/workflows/ci.yml/badge.svg)
 ![Release](https://github.com/den-ree/swift-ciua/actions/workflows/release.yml/badge.svg)
-
-![Chiui logo](assets/icon.png)
 
 Effective, context-first state updates for SwiftUI, designed for Swift 6 concurrency readiness and unidirectional UI architecture.
 
