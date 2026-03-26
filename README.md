@@ -2,6 +2,13 @@
 
 Chiui: context-based unidirectional state management for SwiftUI
 
+![CI](https://github.com/den-ree/swift-ciua/actions/workflows/ci.yml/badge.svg)
+![Release](https://github.com/den-ree/swift-ciua/actions/workflows/release.yml/badge.svg)
+
+![Chiui logo](assets/icon.png)
+
+Effective, context-first state updates for SwiftUI, designed for Swift 6 concurrency readiness and unidirectional UI architecture.
+
 ## Features
 
 - **State Management**: Simple and efficient state management using a store-based approach
@@ -24,7 +31,7 @@ Add the following to your `Package.swift` file:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/den-ree/swift-ciua", branch: "main")
+    .package(url: "https://github.com/den-ree/swift-ciua", from: "1.0.0")
 ]
 ```
 
@@ -125,6 +132,19 @@ For detailed documentation, including:
 - Advanced usage examples
 
 Please visit our [Documentation](Sources/Chiui/Chiui.docc/Documentation.md).
+
+Hosted DocC can be published with the `Publish DocC` workflow to GitHub Pages.
+
+## Why Chiui
+
+- Local view state and global store state are clearly separated.
+- Async side effects are explicit and chainable through `then(_:)`.
+- Store to view mapping is centralized in `didStoreUpdate(_:)`.
+- Works naturally with SwiftUI via `ContextualView` bindings.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development and PR guidance.
 
 ## License
 
