@@ -129,7 +129,7 @@ For detailed documentation, including:
 - Testing guidelines
 - Advanced usage examples
 
-Please visit our [Documentation](Sources/Chiui/Chiui.docc/Documentation.md).
+Please visit our [Documentation](https://den-ree.github.io/chiui/documentation/chiui/).
 
 Hosted DocC can be published with the `Publish DocC` workflow to GitHub Pages.
 
