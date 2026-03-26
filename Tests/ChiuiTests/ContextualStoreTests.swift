@@ -17,10 +17,10 @@ struct ContextualStoreTests {
   @Test("Subscribe immediately emits initial state")
   func testSubscribeSendsInitialState() async throws {
     let store = ContextualStore(TestState(count: 5, isEnabled: true))
-    let collector = UpdateCollector()
+    let collector = OrderedUpdateCollector()
 
     let subscription = await store.subscribe { old, new in
-      Task { await collector.append(old: old, new: new) }
+      collector.receive(old: old, new: new)
     }
 
     #expect(await TestUtils.waitUntil(timeout: .seconds(1)) { await collector.count() == 1 })
@@ -32,15 +32,16 @@ struct ContextualStoreTests {
     #expect(updates[0].new.isEnabled == true)
 
     subscription.cancel()
+    await collector.finish()
   }
 
   @Test("Store only notifies on Equatable state changes")
   func testUpdateSendsOnlyWhenChanged() async throws {
     let store = ContextualStore(TestState(count: 1, isEnabled: false))
-    let collector = UpdateCollector()
+    let collector = OrderedUpdateCollector()
 
     let subscription = await store.subscribe { old, new in
-      Task { await collector.append(old: old, new: new) }
+      collector.receive(old: old, new: new)
     }
 
     #expect(await TestUtils.waitUntil(timeout: .seconds(1)) { await collector.count() == 1 })
@@ -70,15 +71,16 @@ struct ContextualStoreTests {
     #expect(updates[1].new.isEnabled == true)
 
     subscription.cancel()
+    await collector.finish()
   }
 
   @Test("Sequential updates preserve notification order")
   func testSequentialUpdateOrder() async throws {
     let store = ContextualStore(TestState(count: 0, isEnabled: false))
-    let collector = UpdateCollector()
+    let collector = OrderedUpdateCollector()
 
     let subscription = await store.subscribe { old, new in
-      Task { await collector.append(old: old, new: new) }
+      collector.receive(old: old, new: new)
     }
 
     let updateCount = 5
@@ -95,15 +97,16 @@ struct ContextualStoreTests {
     #expect(newCounts == [0, 1, 2, 3, 4, 5])
 
     subscription.cancel()
+    await collector.finish()
   }
 
   @Test("Cancelling a subscription stops further notifications")
   func testSubscriptionCancellationStopsNotifications() async throws {
     let store = ContextualStore(TestState(count: 0))
-    let collector = UpdateCollector()
+    let collector = OrderedUpdateCollector()
 
     let subscription = await store.subscribe { old, new in
-      Task { await collector.append(old: old, new: new) }
+      collector.receive(old: old, new: new)
     }
 
     #expect(await TestUtils.waitUntil(timeout: .seconds(1)) { await collector.count() == 1 })
@@ -116,15 +119,16 @@ struct ContextualStoreTests {
 
     try? await Task.sleep(for: .milliseconds(50))
     #expect(await collector.count() == 1)
+    await collector.finish()
   }
 
   @Test("Concurrent updates are safe and all notifications are delivered")
   func testConcurrentUpdatesDelivery() async throws {
     let store = ContextualStore(TestState(count: 0, isEnabled: false))
-    let collector = UpdateCollector()
+    let collector = OrderedUpdateCollector()
 
     let subscription = await store.subscribe { old, new in
-      Task { await collector.append(old: old, new: new) }
+      collector.receive(old: old, new: new)
     }
 
     let updateCount = 100
@@ -151,17 +155,68 @@ struct ContextualStoreTests {
     }
 
     subscription.cancel()
+    await collector.finish()
   }
 }
 
 private actor UpdateCollector {
   typealias Update = (old: ContextualStoreTests.TestState?, new: ContextualStoreTests.TestState)
-  private(set) var updates: [Update] = []
+  private var updates: [Update] = []
 
   func append(old: ContextualStoreTests.TestState?, new: ContextualStoreTests.TestState) {
     updates.append((old: old, new: new))
   }
 
-  func snapshot() -> [Update] { updates }
-  func count() -> Int { updates.count }
+  func snapshot() -> [Update] {
+    updates
+  }
+
+  func count() -> Int {
+    updates.count
+  }
+}
+
+private final class OrderedUpdateCollector: @unchecked Sendable {
+  typealias Update = UpdateCollector.Update
+
+  private let continuation: AsyncStream<Update>.Continuation
+  private let consumerTask: Task<Void, Never>
+  private let collector: UpdateCollector
+
+  init() {
+    let collector = UpdateCollector()
+    self.collector = collector
+
+    var localContinuation: AsyncStream<Update>.Continuation?
+    let stream = AsyncStream<Update> { continuation in
+      localContinuation = continuation
+    }
+    guard let continuation = localContinuation else {
+      fatalError("Failed to initialize update stream continuation")
+    }
+    self.continuation = continuation
+
+    consumerTask = Task {
+      for await update in stream {
+        await collector.append(old: update.old, new: update.new)
+      }
+    }
+  }
+
+  func receive(old: ContextualStoreTests.TestState?, new: ContextualStoreTests.TestState) {
+    continuation.yield((old: old, new: new))
+  }
+
+  func count() async -> Int {
+    await collector.count()
+  }
+
+  func snapshot() async -> [Update] {
+    await collector.snapshot()
+  }
+
+  func finish() async {
+    continuation.finish()
+    _ = await consumerTask.result
+  }
 }
