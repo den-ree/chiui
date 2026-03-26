@@ -5,7 +5,7 @@
 //  Created by Den Ree on 04/04/2025.
 //
 
-@preconcurrency import Combine
+import Combine
 
 /// An actor that manages application state with thread-safe access and change notifications.
 ///

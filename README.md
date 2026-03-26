@@ -5,7 +5,7 @@ Context-based unidirectional state management for SwiftUI
 ![CI](https://github.com/den-ree/chiui/actions/workflows/ci.yml/badge.svg)
 ![Release](https://github.com/den-ree/chiui/actions/workflows/release.yml/badge.svg)
 
-Effective, context-first state updates for SwiftUI, designed for Swift 6 concurrency readiness and unidirectional UI architecture.
+Simple, lightweight updates for SwiftUI, designed for Swift 6 concurrency and unidirectional UI architecture.
 
 ## Features
 
