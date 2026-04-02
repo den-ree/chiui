@@ -15,7 +15,7 @@ Add the following to your `Package.swift` file:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/den-ree/chiui", from: "1.0.0")
+    .package(url: "https://github.com/den-ree/chiui", from: "1.0.1")
 ]
 ```
 
@@ -115,6 +115,16 @@ struct EntryView: ContextualView {
     }
 }
 ```
+
+## Documentation
+
+Please visit our [Documentation](https://den-ree.github.io/chiui/documentation/chiui/).
+
+## Why Chiui
+
+- Local view state and global store state are clearly separated.
+- Store to view mapping is centralized in `didStoreUpdate(_:)`.
+- Works naturally with SwiftUI via `ContextualView` bindings.
 
 ## Contributing
 
