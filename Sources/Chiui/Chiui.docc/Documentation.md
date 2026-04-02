@@ -4,52 +4,11 @@ Chiui: context-based unidirectional state management for SwiftUI
 
 ## Overview
 
-Chiui is a lightweight, type-safe state management approach for SwiftUI that enforces unidirectional
-state flow using a context/store/view model.
+Chiui is a lightweight state management approach for SwiftUI that enforces unidirectional state flow using a context/store/view model.
 
 ## Core Components
 
-### State Management
-
-- ``ContextualStore`` - Thread-safe actor-based store for application state
-- ``ContextualState`` - Base protocol for all state types
-- ``ContextualStoreState`` - Protocol for global store state
-- ``ContextualViewState`` - Protocol for local view state
-
-### View Integration
-
-- ``ContextualView`` - SwiftUI view wrapper with automatic store integration
-- ``ContextViewModel`` - Reactive view model with flexible side effects
-- ``StoreContext`` - Context holder for the store dependency
-- ``ContextualStateSideEffect`` - Chainable async follow-up handle
-
-## Key Features
-
-### Flexible Side Effects
-
-Chiui's `then(_:)` API provides async chaining for state updates:
-
-```swift
-// Update state with side effects
-viewModel.updateState { state in
-    state.name = newName
-    state.isLoading = true
-}.then { change in
-    // Update global store
-    await context.store.update(state: { storeState in
-        storeState.userProfile.name = change.newState.name
-    })
-    
-    // Track analytics
-    analytics.track("name_updated", properties: [
-        "old_name": change.oldState.name,
-        "new_name": change.newState.name
-    ])
-    
-    // Make API call
-    await api.updateUserProfile(name: change.newState.name)
-}
-```
+![Chiui state flow diagram](state-flow-diagram.png)
 
 ## Getting Started
 
@@ -88,27 +47,32 @@ let context = AppContext(store: store)
 
 ```swift
 final class ProfileViewModel: ContextViewModel<AppContext, ProfileViewState> {
-    override func didStoreUpdate(_ storeState: AppStoreState) async {
-        updateState { viewState in
+    nonisolated override func didStoreUpdate(_ storeState: AppStoreState) async {
+        await updateState { viewState in
             viewState.displayName = storeState.user?.name ?? ""
             viewState.isSaving = false
         }
     }
     
     func updateName(_ name: String) {
-        updateState { state in
-            state.displayName = name
-            state.validationError = validateName(name)
-        }.then { change in
-            guard change.newState.validationError == nil else { return }
-            
-            // Update global state
-            await context.store.update(state: { storeState in
-                storeState.user?.name = change.newState.displayName
-            })
-            
-            // Save to backend
-            await saveUserProfile(name: change.newState.displayName)
+        Task { in
+            await updateState { state in
+                state.displayName = name
+                state.validationError = validateName(name)
+            }.then { [weak self] change in
+                guard
+                    let self,
+                    change.newState.validationError == nil
+                else { return }
+                
+                // Update global state
+                self.updateStore { storeState in
+                    storeState.user?.name = change.newState.displayName
+                }
+                
+                // Save to backend
+                await self.saveUserProfile(name: change.newState.displayName)
+            }
         }
     }
     
@@ -123,68 +87,29 @@ final class ProfileViewModel: ContextViewModel<AppContext, ProfileViewState> {
 ### 4. Use in SwiftUI
 
 ```swift
-struct ProfileView: View {
-    @StateObject private var viewModel: ProfileViewModel
+struct ProfileView: ContextualView {
+    @StateObject var viewModel: ProfileViewModel
     
-    init(context: AppContext) {
-        self._viewModel = StateObject(wrappedValue: ProfileViewModel(context))
+    init(_ context: AppContext) {
+        _viewModel = .init(wrappedValue: .init(context))
     }
     
     var body: some View {
         VStack {
-            if viewModel.state.isEditing {
-                TextField("Name", text: .constant(viewModel.state.displayName))
-                    .onSubmit {
-                        viewModel.updateName(viewModel.state.displayName)
-                    }
+            if state.isEditing {
+                TextField("Name", text: bindTo(\.displayName) { viewModel.updateName($0) })
             } else {
-                Text(viewModel.state.displayName)
+                Text(state.displayName)
                     .onTapGesture {
                         viewModel.startEditing()
                     }
             }
             
-            if let error = viewModel.state.validationError {
+            if let error = state.validationError {
                 Text(error).foregroundColor(.red)
             }
         }
     }
-}
-```
-
-## Advanced Patterns
-
-### Multiple Side Effects
-
-Handle multiple operations within a single `then` block:
-
-```swift
-viewModel.updateState { state in
-    state.selectedItems = newSelection
-}.then { change in
-    // Immediate UI feedback
-    hapticFeedback.selectionChanged()
-    
-    // Background analytics
-    analytics.track("selection_changed", count: change.newState.selectedItems.count)
-    
-    // Async store update
-    await context.store.update(state: { storeState in
-        storeState.lastSelection = change.newState.selectedItems
-    })
-}
-```
-
-### Conditional Side Effects
-
-```swift
-viewModel.updateState { state in
-    state.searchText = query
-}.then { change in
-    // Only search if query is long enough
-    guard change.newState.searchText.count >= 3 else { return }
-    
-    await performSearch(query: change.newState.searchText)
 }
 ```
 

@@ -7,20 +7,6 @@ Context-based unidirectional state management for SwiftUI
 
 Simple, lightweight updates for SwiftUI, designed for Swift 6 concurrency and unidirectional UI architecture.
 
-## Features
-
-- **State Management**: Simple and efficient state management using a store-based approach
-- **View Models**: Built-in support for view models with state transformation
-- **Type Safety**: Fully type-safe implementation
-- **SwiftUI Integration**: Seamless integration with SwiftUI views
-- **Testability**: Easy to test with clear separation of concerns
-
-## Requirements
-
-- iOS 16.0+ / macOS 13.0+
-- Swift 5.9+
-- Xcode 15.0+
-
 ## Installation
 
 ### Swift Package Manager
@@ -122,13 +108,6 @@ struct EntryView: ContextualView {
 
 ## Documentation
 
-For detailed documentation, including:
-- Complete API reference
-- Architecture overview
-- Best practices
-- Testing guidelines
-- Advanced usage examples
-
 Please visit our [Documentation](https://den-ree.github.io/chiui/documentation/chiui/).
 
 Hosted DocC can be published with the `Publish DocC` workflow to GitHub Pages.
@@ -136,7 +115,6 @@ Hosted DocC can be published with the `Publish DocC` workflow to GitHub Pages.
 ## Why Chiui
 
 - Local view state and global store state are clearly separated.
-- Async side effects are explicit and chainable through `then(_:)`.
 - Store to view mapping is centralized in `didStoreUpdate(_:)`.
 - Works naturally with SwiftUI via `ContextualView` bindings.
 

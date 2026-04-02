@@ -49,18 +49,23 @@ public protocol ContextualViewModel: ObservableObject {
 ///
 /// ```swift
 /// final class UserProfileViewModel: ContextViewModel<AppContext, UserProfileViewState> {
-///     override func didStoreUpdate(_ storeState: AppContext.StoreState) async {
-///         updateState { state in
+///     nonisolated override func didStoreUpdate(_ storeState: AppContext.StoreState) async {
+///         await updateState { state in
 ///             state.name = storeState.userProfile.name
 ///             state.isSavingDisabled = storeState.userProfile.name.isEmpty
 ///         }
 ///     }
 ///
 ///     func updateName(_ name: String) {
-///         updateState { state in
-///             state.name = name
-///         }.updateStore { change, storeState in
-///             storeState.userProfile.name = change.newState.name
+///         Task { @MainActor in
+///             await updateState { state in
+///                 state.name = name
+///             }.then { [weak self] change in
+///                 guard let self else { return }
+///                 self.updateStore { storeState in
+///                     storeState.userProfile.name = change.newState.name
+///                 }
+///             }
 ///         }
 ///     }
 /// }
@@ -146,8 +151,8 @@ open class ContextViewModel<InjectedStoreContext: StoreContext, ViewState: Conte
   /// ## Usage
   ///
   /// ```swift
-  /// override func didStoreUpdate(_ storeState: AppContext.StoreState) async {
-  ///     updateState { state in
+  /// nonisolated override func didStoreUpdate(_ storeState: AppContext.StoreState) async {
+  ///     await updateState { state in
   ///         state.name = storeState.userProfile.name
   ///         state.isSavingDisabled = storeState.userProfile.name.isEmpty
   ///     }
