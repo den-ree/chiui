@@ -19,6 +19,16 @@ dependencies: [
 ]
 ```
 
+## Documentation
+
+Please visit our [Documentation](https://den-ree.github.io/chiui/documentation/chiui/).
+
+## Why Chiui
+
+- Local view state and global store state are clearly separated.
+- Store to view mapping is centralized in `didStoreUpdate(_:)`.
+- Works naturally with SwiftUI via `ContextualView` bindings.
+
 ## Usage
 
 Chiui enables a clean separation of local (view) state and global (store) state, with support for side effects. Here are the recommended patterns:
@@ -105,18 +115,6 @@ struct EntryView: ContextualView {
     }
 }
 ```
-
-## Documentation
-
-Please visit our [Documentation](https://den-ree.github.io/chiui/documentation/chiui/).
-
-Hosted DocC can be published with the `Publish DocC` workflow to GitHub Pages.
-
-## Why Chiui
-
-- Local view state and global store state are clearly separated.
-- Store to view mapping is centralized in `didStoreUpdate(_:)`.
-- Works naturally with SwiftUI via `ContextualView` bindings.
 
 ## Contributing
 
