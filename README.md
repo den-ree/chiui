@@ -15,7 +15,7 @@ Add the following to your `Package.swift` file:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/den-ree/chiui", from: "1.0.0")
+    .package(url: "https://github.com/den-ree/chiui", from: "1.0.1")
 ]
 ```
 
@@ -109,8 +109,6 @@ struct EntryView: ContextualView {
 ## Documentation
 
 Please visit our [Documentation](https://den-ree.github.io/chiui/documentation/chiui/).
-
-Hosted DocC can be published with the `Publish DocC` workflow to GitHub Pages.
 
 ## Why Chiui
 
