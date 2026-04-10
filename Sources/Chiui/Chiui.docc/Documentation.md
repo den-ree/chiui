@@ -55,7 +55,7 @@ final class ProfileViewModel: ContextViewModel<AppContext, ProfileViewState> {
     }
     
     func updateName(_ name: String) {
-        Task { in
+        Task {
             await updateState { state in
                 state.displayName = name
                 state.validationError = validateName(name)
@@ -83,6 +83,12 @@ final class ProfileViewModel: ContextViewModel<AppContext, ProfileViewState> {
     }
 }
 ```
+
+### Concurrency Semantics
+
+- `updateState(_:)` is synchronous and can be used directly in sync action methods.
+- Chaining with `.then(_:)` is asynchronous and must be called from an async context (for example `Task { await ... }`).
+- Inside `.then`, prefer data from `change.newState`/`change.oldState` instead of reading actor-isolated `state` from a sendable closure.
 
 ### 4. Use in SwiftUI
 
