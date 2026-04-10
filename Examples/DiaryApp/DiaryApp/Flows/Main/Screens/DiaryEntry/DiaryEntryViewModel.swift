@@ -13,8 +13,10 @@ final class DiaryEntryViewModel: ContextViewModel<DiaryContext, DiaryEntryViewMo
   struct State: ContextualViewState {
     var title: String = ""
     var content: String = ""
+    var selectedDate: Date = .now
     var savingStatus: SavingStatus = .no
     var isEditing: Bool = false
+    var isDateSelectionPresented: Bool = false
     var entryTitle: String = ""
 
     var isSavingDisabled: Bool {
@@ -45,13 +47,16 @@ final class DiaryEntryViewModel: ContextViewModel<DiaryContext, DiaryEntryViewMo
       switch storeState.entrySelectionMode {
       case .addingNew:
         state.entryTitle = "New Entry"
+        state.selectedDate = storeState.entryDraftDate ?? .now
       case let .selecting(entry):
         state.title = entry.title
         state.content = entry.content
+        state.selectedDate = storeState.entryDraftDate ?? entry.createdAt
         state.entryTitle = entry.title
       case .no:
         break
       }
+      state.isDateSelectionPresented = storeState.isSelectingEntryDate
     }
   }
 
@@ -72,6 +77,35 @@ final class DiaryEntryViewModel: ContextViewModel<DiaryContext, DiaryEntryViewMo
   func startEditing() {
     updateState { state in
       state.isEditing = true
+    }
+  }
+
+  func openDateSelection() {
+    Task {
+      await updateState { state in
+        state.isEditing = true
+      }.then { [weak self] change in
+        guard let self else { return }
+
+        self.updateStore { storeState in
+          storeState.entryDraftDate = change.newState.selectedDate
+          storeState.isSelectingEntryDate = true
+        }
+      }
+    }
+  }
+
+  func updateSelectedDate(_ date: Date) {
+    Task {
+      await updateState { state in
+        state.selectedDate = date
+        state.isEditing = true
+      }.then { [weak self] change in
+        guard let self, change.hasChanged else { return }
+        self.updateStore { storeState in
+          storeState.entryDraftDate = change.newState.selectedDate
+        }
+      }
     }
   }
 
@@ -101,7 +135,7 @@ final class DiaryEntryViewModel: ContextViewModel<DiaryContext, DiaryEntryViewMo
         id: .init(),
         title: state.title,
         content: state.content,
-        createdAt: .now
+        createdAt: state.selectedDate
       )
 
       self.updateStore { storeState in
@@ -109,7 +143,11 @@ final class DiaryEntryViewModel: ContextViewModel<DiaryContext, DiaryEntryViewMo
         case .addingNew:
           storeState.entries.append(newEntry)
         case let .selecting(existingEntry):
-          let updatedEntry = existingEntry.new(title: newEntry.title, content: newEntry.content)
+          let updatedEntry = existingEntry.new(
+            title: newEntry.title,
+            content: newEntry.content,
+            createdAt: state.selectedDate
+          )
           storeState.entries = storeState.entries.map { $0.id == existingEntry.id ? updatedEntry : $0 }
         case .no:
           break
@@ -129,6 +167,8 @@ final class DiaryEntryViewModel: ContextViewModel<DiaryContext, DiaryEntryViewMo
     }.then {  [weak self] _ in
       self?.updateStore { storeState in
         storeState.entrySelectionMode = .no
+        storeState.isSelectingEntryDate = false
+        storeState.entryDraftDate = nil
       }
     }
   }

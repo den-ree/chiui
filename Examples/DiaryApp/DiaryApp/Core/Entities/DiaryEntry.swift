@@ -11,12 +11,12 @@ struct DiaryEntry: Identifiable, Equatable, Sendable {
   /// Date when the entry was created
   let createdAt: Date
 
-  func new(title: String, content: String) -> Self {
+  func new(title: String, content: String, createdAt: Date? = nil) -> Self {
     return .init(
       id: id,
       title: title,
       content: content,
-      createdAt: createdAt
+      createdAt: createdAt ?? self.createdAt
     )
   }
 }

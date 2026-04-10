@@ -22,6 +22,20 @@ struct DiaryEntryView: ContextualView {
   var body: some View {
     ZStack {
       Form {
+        Section(header: Text("Date")) {
+          Button {
+            focusedField = nil
+            viewModel.openDateSelection()
+          } label: {
+            HStack {
+              Text("Entry Date")
+              Spacer()
+              Text(state.selectedDate, style: .date)
+                .foregroundStyle(.secondary)
+            }
+          }
+        }
+
         Section(header: Text("Title")) {
           TextField("Enter title", text: bindTo(\.title) { viewModel.updateTitle($0) })
           .focused($focusedField, equals: .title)
@@ -65,6 +79,11 @@ struct DiaryEntryView: ContextualView {
             .disabled(state.isSavingDisabled)
           }
         }
+      }
+      .navigationDestination(
+        isPresented: bindTo(\.isDateSelectionPresented) { _ in }
+      ) {
+        DiaryEntryDateSelectionView(viewModel.context)
       }
 
       if state.savingStatus == .saving {
