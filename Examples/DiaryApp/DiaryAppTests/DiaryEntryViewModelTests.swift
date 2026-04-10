@@ -30,6 +30,7 @@ final class DiaryEntryViewModelTests: XCTestCase {
     XCTAssertEqual(sut.viewState.content, "")
     XCTAssertEqual(sut.viewState.savingStatus, .no)
     XCTAssertFalse(sut.viewState.isEditing)
+    XCTAssertFalse(sut.viewState.isDateSelectionPresented)
     XCTAssertEqual(sut.viewState.entryTitle, "")
   }
 
@@ -116,8 +117,10 @@ final class DiaryEntryViewModelTests: XCTestCase {
 
   @MainActor
   func testStoreUpdateOnNewEntry() async {
+    let selectedDate = Date(timeIntervalSince1970: 1_700_000_000)
     await context.store.update { state in
       state.entrySelectionMode = .addingNew
+      state.entryDraftDate = selectedDate
     }
     try? await Task.sleep(for: .seconds(0.1))
     sut.updateTitle("Test Title")
@@ -132,6 +135,7 @@ final class DiaryEntryViewModelTests: XCTestCase {
     let entry = state.entries[0]
     XCTAssertEqual(entry.title, "Test Title")
     XCTAssertEqual(entry.content, "Test Content")
+    XCTAssertEqual(entry.createdAt, selectedDate)
   }
 
   @MainActor
@@ -143,9 +147,11 @@ final class DiaryEntryViewModelTests: XCTestCase {
       content: "Initial Content",
       createdAt: .now
     )
+    let updatedDate = Date(timeIntervalSince1970: 1_800_000_000)
     await context.store.update { state in
       state.entries = [initialEntry]
       state.entrySelectionMode = .selecting(initialEntry)
+      state.entryDraftDate = updatedDate
     }
 
     try? await Task.sleep(for: .seconds(0.1))
@@ -163,6 +169,7 @@ final class DiaryEntryViewModelTests: XCTestCase {
     let entry = state.entries[0]
     XCTAssertEqual(entry.title, "Updated Title")
     XCTAssertEqual(entry.content, "Updated Content")
+    XCTAssertEqual(entry.createdAt, updatedDate)
   }
 
   @MainActor
@@ -190,6 +197,7 @@ final class DiaryEntryViewModelTests: XCTestCase {
     XCTAssertEqual(sut.viewState.entryTitle, "Test Title")
     XCTAssertEqual(sut.viewState.title, "Test Title")
     XCTAssertEqual(sut.viewState.content, "Test Content")
+    XCTAssertEqual(sut.viewState.selectedDate, entry.createdAt)
 
     // Test no selection mode
     await context.store.update { state in
@@ -200,5 +208,17 @@ final class DiaryEntryViewModelTests: XCTestCase {
     XCTAssertEqual(sut.viewState.entryTitle, "Test Title")
     XCTAssertEqual(sut.viewState.title, "Test Title")
     XCTAssertEqual(sut.viewState.content, "Test Content")
+  }
+
+  @MainActor
+  func testUpdateSelectedDatePersistsDraftDate() async {
+    let date = Date(timeIntervalSince1970: 1_850_000_000)
+    sut.updateSelectedDate(date)
+
+    try? await Task.sleep(for: .seconds(0.1))
+
+    XCTAssertEqual(sut.viewState.selectedDate, date)
+    let storeState = await context.store.state
+    XCTAssertEqual(storeState.entryDraftDate, date)
   }
 }
