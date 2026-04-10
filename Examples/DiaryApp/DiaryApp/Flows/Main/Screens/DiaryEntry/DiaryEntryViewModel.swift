@@ -16,7 +16,6 @@ final class DiaryEntryViewModel: ContextViewModel<DiaryContext, DiaryEntryViewMo
     var savingStatus: SavingStatus = .no
     var isEditing: Bool = false
     var entryTitle: String = ""
-    var shouldDismiss: Bool = false
 
     var isSavingDisabled: Bool {
       title.isEmpty || savingStatus == .saving
@@ -46,17 +45,12 @@ final class DiaryEntryViewModel: ContextViewModel<DiaryContext, DiaryEntryViewMo
       switch storeState.entrySelectionMode {
       case .addingNew:
         state.entryTitle = "New Entry"
-        state.shouldDismiss = false
       case let .selecting(entry):
         state.title = entry.title
         state.content = entry.content
         state.entryTitle = entry.title
-        state.shouldDismiss = false
       case .no:
-        state.entryTitle = ""
-        state.title = ""
-        state.content = ""
-        state.shouldDismiss = true
+        break
       }
     }
   }

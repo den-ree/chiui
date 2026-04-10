@@ -13,22 +13,11 @@ struct DiaryListView: ContextualView {
   }
 
   var body: some View {
-    NavigationView {
+    NavigationStack {
       List {
         ForEach(state.entries) { entry in
-          NavigationLink(
-            isActive: Binding(
-              get: { state.selectedEntryId == entry.id },
-              set: { isActive in
-                if isActive {
-                  viewModel.selectEntry(entry)
-                } else {
-                  viewModel.clearSelection()
-                }
-              }
-            )
-          ) {
-            DiaryEntryView(viewModel.context)
+          Button {
+            viewModel.selectEntry(entry)
           } label: {
             VStack(alignment: .leading, spacing: 8) {
               Text(entry.title)
@@ -44,6 +33,7 @@ struct DiaryListView: ContextualView {
             }
             .padding(.vertical, 4)
           }
+          .buttonStyle(.plain)
         }
         .onDelete { indexSet in
           for index in indexSet {
@@ -54,18 +44,25 @@ struct DiaryListView: ContextualView {
       .navigationTitle("Diary")
       .toolbar {
         ToolbarItem(placement: .navigationBarTrailing) {
-          NavigationLink(
-            isActive: bindTo(\.isAddingNew) { newValue in
-              if newValue {
-                viewModel.startAddingNew()
-              }
-            }
-          ) {
-            DiaryEntryView(viewModel.context)
+          Button {
+            viewModel.startAddingNew()
           } label: {
             Image(systemName: "plus")
           }
         }
+      }
+      .navigationDestination(
+        isPresented: Binding(
+          get: { viewModel.isEntryDestinationPresented() },
+          set: { viewModel.setEntryDestinationPresented($0) }
+        )
+      ) {
+        DiaryEntryView(viewModel.context)
+      }
+      .navigationDestination(
+        isPresented: bindTo(\.isAddingNew) { viewModel.setAddingNewDestinationPresented($0) }
+      ) {
+        DiaryEntryView(viewModel.context)
       }
     }
   }

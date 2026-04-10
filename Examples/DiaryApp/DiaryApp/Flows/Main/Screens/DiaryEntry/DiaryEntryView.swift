@@ -5,8 +5,6 @@ import Chiui
 struct DiaryEntryView: ContextualView {
   /// View model for adding diary entries
   @StateObject var viewModel: DiaryEntryViewModel
-  /// Environment presentation mode for dismissing the view
-  @Environment(\.presentationMode) private var presentationMode
   /// Focus state for tracking which field is being edited
   @FocusState private var focusedField: Field?
 
@@ -66,11 +64,6 @@ struct DiaryEntryView: ContextualView {
             }
             .disabled(state.isSavingDisabled)
           }
-        }
-      }
-      .onChange(of: state.shouldDismiss) { _, newValue in
-        if newValue {
-          presentationMode.wrappedValue.dismiss()
         }
       }
 
