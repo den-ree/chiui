@@ -21,6 +21,7 @@ class DiaryAppUITestsLaunchTests: XCTestCase {
     func testLaunch() throws {
         let app = XCUIApplication()
         app.launch()
+        XCTAssertTrue(app.navigationBars["Diary"].waitForExistence(timeout: 2))
 
         // Insert steps here to perform after app launch but before taking a screenshot,
         // such as logging into a test account or navigating somewhere in the app

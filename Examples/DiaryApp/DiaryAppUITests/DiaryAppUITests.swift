@@ -23,12 +23,28 @@ final class DiaryAppUITests: XCTestCase {
     }
 
     @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
+    func testCreateEntryAndVerifyInList() throws {
         let app = XCUIApplication()
         app.launch()
 
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+        XCTAssertTrue(app.navigationBars["Diary"].waitForExistence(timeout: 2))
+
+        // Open add-entry flow from the trailing navigation bar button.
+        let addButton = app.navigationBars["Diary"].buttons.element(boundBy: 0)
+        XCTAssertTrue(addButton.waitForExistence(timeout: 2))
+        addButton.tap()
+
+        let titleField = app.textFields["Enter title"]
+        XCTAssertTrue(titleField.waitForExistence(timeout: 2))
+        titleField.tap()
+        titleField.typeText("UI Test Entry")
+
+        let saveButton = app.navigationBars.buttons["Save"]
+        XCTAssertTrue(saveButton.waitForExistence(timeout: 2))
+        XCTAssertTrue(saveButton.isEnabled)
+        saveButton.tap()
+
+        XCTAssertTrue(app.buttons["UI Test Entry"].waitForExistence(timeout: 5))
     }
 
     @MainActor

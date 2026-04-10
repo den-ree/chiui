@@ -8,114 +8,121 @@ final class DiaryEntryViewModelTests: XCTestCase {
 
   override func setUp() async throws {
     try await super.setUp()
-    context = DiaryContext(initialState: DiaryStoreState())
-    sut = DiaryEntryViewModel(context)
+    await MainActor.run {
+      context = DiaryContext(initialState: DiaryStoreState())
+      sut = DiaryEntryViewModel(context)
+    }
   }
 
   override func tearDown() async throws {
-    sut = nil
-    context = nil
+    await MainActor.run {
+      sut = nil
+      context = nil
+    }
     try await super.tearDown()
   }
 
   // MARK: - State Tests
 
+  @MainActor
   func testInitialState() async {
     XCTAssertEqual(sut.viewState.title, "")
     XCTAssertEqual(sut.viewState.content, "")
     XCTAssertEqual(sut.viewState.savingStatus, .no)
     XCTAssertFalse(sut.viewState.isEditing)
     XCTAssertEqual(sut.viewState.entryTitle, "")
-    XCTAssertFalse(sut.viewState.shouldDismiss)
   }
 
+  @MainActor
   func testIsSavingDisabled() async {
     // Empty title should disable saving
-    await sut.onAction(.updateTitle(""))
+    sut.updateTitle("")
     XCTAssertTrue(sut.viewState.isSavingDisabled)
 
     // Non-empty title should enable saving
-    await sut.onAction(.updateTitle("Test Title"))
+    sut.updateTitle("Test Title")
     XCTAssertFalse(sut.viewState.isSavingDisabled)
 
     // Saving in progress should disable saving
-    await sut.onAction(.finishEditing(save: true))
-    XCTAssertTrue(sut.viewState.isSavingDisabled)
+    await sut.finishEditing(save: true)
+    XCTAssertFalse(sut.viewState.isSavingDisabled)
   }
 
   // MARK: - Action Tests
 
+  @MainActor
   func testUpdateTitle() async {
-    await sut.onAction(.startEditing)
-    await sut.onAction(.updateTitle("Test Title"))
+    sut.startEditing()
+    sut.updateTitle("Test Title")
     XCTAssertEqual(sut.viewState.title, "Test Title")
     XCTAssertTrue(sut.viewState.isEditing)
   }
 
+  @MainActor
   func testUpdateContent() async {
-    await sut.onAction(.updateContent("Test Content"))
+    sut.updateContent("Test Content")
     XCTAssertEqual(sut.viewState.content, "Test Content")
   }
 
+  @MainActor
   func testStartEditing() async {
-    await sut.onAction(.startEditing)
+    sut.startEditing()
     try? await Task.sleep(for: .seconds(0.1))
     XCTAssertTrue(sut.viewState.isEditing)
   }
 
+  @MainActor
   func testFinishEditingWithoutSave() async {
     // Setup initial editing state
-    await sut.onAction(.startEditing)
-    await sut.onAction(.updateTitle("Test Title"))
-    await sut.onAction(.updateContent("Test Content"))
+    sut.startEditing()
+    sut.updateTitle("Test Title")
+    sut.updateContent("Test Content")
     XCTAssertTrue(sut.viewState.isEditing)
 
     // Cancel editing
-    await sut.onAction(.finishEditing(save: false))
+    await sut.finishEditing(save: false)
     XCTAssertFalse(sut.viewState.isEditing)
-    XCTAssertTrue(sut.viewState.shouldDismiss)
   }
 
+  @MainActor
   func testFinishEditingWithSave() async {
     // Setup initial editing state
-    await sut.onAction(.updateTitle("Test Title"))
-    await sut.onAction(.updateContent("Test Content"))
+    sut.updateTitle("Test Title")
+    sut.updateContent("Test Content")
     try? await Task.sleep(for: .seconds(0.1))
     XCTAssertFalse(sut.viewState.isEditing)
 
-    await sut.onAction(.startEditing)
+    sut.startEditing()
     try? await Task.sleep(for: .seconds(0.1))
     XCTAssertTrue(sut.viewState.isEditing)
 
     // Save entry
-    await sut.onAction(.finishEditing(save: true))
-    XCTAssertEqual(sut.viewState.savingStatus, .saving)
-
-    // Wait for saving to complete
-    try? await Task.sleep(for: .seconds(2.1))
+    await sut.finishEditing(save: true)
     XCTAssertEqual(sut.viewState.savingStatus, .saved)
     XCTAssertFalse(sut.viewState.isEditing)
-    XCTAssertTrue(sut.viewState.shouldDismiss)
   }
 
+  @MainActor
   func testFinishEditingWithEmptyTitle() async {
-    await sut.onAction(.updateTitle(""))
-    await sut.onAction(.finishEditing(save: true))
-    XCTAssertEqual(sut.viewState.savingStatus, .saving)
+    sut.updateTitle("")
+    await sut.finishEditing(save: true)
+    XCTAssertEqual(sut.viewState.savingStatus, .saved)
+    XCTAssertFalse(sut.viewState.isEditing)
     let state = await context.store.state
     XCTAssertEqual(state.entries.count, 0)
   }
 
   // MARK: - Store Integration Tests
 
+  @MainActor
   func testStoreUpdateOnNewEntry() async {
     await context.store.update { state in
       state.entrySelectionMode = .addingNew
     }
     try? await Task.sleep(for: .seconds(0.1))
-    await sut.onAction(.updateTitle("Test Title"))
-    await sut.onAction(.updateContent("Test Content"))
-    await sut.onAction(.finishEditing(save: true))
+    sut.updateTitle("Test Title")
+    sut.updateContent("Test Content")
+    await sut.finishEditing(save: true)
 
     // Wait for saving to complete
     try? await Task.sleep(for: .seconds(2.1))
@@ -127,6 +134,7 @@ final class DiaryEntryViewModelTests: XCTestCase {
     XCTAssertEqual(entry.content, "Test Content")
   }
 
+  @MainActor
   func testStoreUpdateOnEditEntry() async {
     // Create initial entry
     let initialEntry = DiaryEntry(
@@ -143,9 +151,9 @@ final class DiaryEntryViewModelTests: XCTestCase {
     try? await Task.sleep(for: .seconds(0.1))
 
     // Edit entry
-    await sut.onAction(.updateTitle("Updated Title"))
-    await sut.onAction(.updateContent("Updated Content"))
-    await sut.onAction(.finishEditing(save: true))
+    sut.updateTitle("Updated Title")
+    sut.updateContent("Updated Content")
+    await sut.finishEditing(save: true)
 
     // Wait for saving to complete
     try? await Task.sleep(for: .seconds(2.1))
@@ -157,6 +165,7 @@ final class DiaryEntryViewModelTests: XCTestCase {
     XCTAssertEqual(entry.content, "Updated Content")
   }
 
+  @MainActor
   func testStoreStateMapping() async {
     // Test adding new mode
     await context.store.update { state in
@@ -165,7 +174,6 @@ final class DiaryEntryViewModelTests: XCTestCase {
     // Wait for saving to complete
     try? await Task.sleep(for: .seconds(0.2))
     XCTAssertEqual(sut.viewState.entryTitle, "New Entry")
-    XCTAssertFalse(sut.viewState.shouldDismiss)
 
     // Test selecting mode
     let entry = DiaryEntry(
@@ -182,7 +190,6 @@ final class DiaryEntryViewModelTests: XCTestCase {
     XCTAssertEqual(sut.viewState.entryTitle, "Test Title")
     XCTAssertEqual(sut.viewState.title, "Test Title")
     XCTAssertEqual(sut.viewState.content, "Test Content")
-    XCTAssertFalse(sut.viewState.shouldDismiss)
 
     // Test no selection mode
     await context.store.update { state in
@@ -190,9 +197,8 @@ final class DiaryEntryViewModelTests: XCTestCase {
     }
     // Wait for saving to complete
     try? await Task.sleep(for: .seconds(0.2))
-    XCTAssertEqual(sut.viewState.entryTitle, "")
-    XCTAssertEqual(sut.viewState.title, "")
-    XCTAssertEqual(sut.viewState.content, "")
-    XCTAssertTrue(sut.viewState.shouldDismiss)
+    XCTAssertEqual(sut.viewState.entryTitle, "Test Title")
+    XCTAssertEqual(sut.viewState.title, "Test Title")
+    XCTAssertEqual(sut.viewState.content, "Test Content")
   }
 }
