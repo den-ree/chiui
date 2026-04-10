@@ -9,6 +9,10 @@
 /* Begin PBXBuildFile section */
 		774570BB2DDD0216004AB32E /* Chiui in Frameworks */ = {isa = PBXBuildFile; productRef = 774570BA2DDD0216004AB32E /* Chiui */; };
 		77BF54992F7579CE00E1D60D /* Chiui in Frameworks */ = {isa = PBXBuildFile; productRef = 77BF54982F7579CE00E1D60D /* Chiui */; };
+		77BF55082F7D4D2100E1D60D /* Chiui in Frameworks */ = {isa = PBXBuildFile; productRef = 77BF55072F7D4D2100E1D60D /* Chiui */; };
+		77BF550B2F7D4D6400E1D60D /* Chiui in Frameworks */ = {isa = PBXBuildFile; productRef = 77BF550A2F7D4D6400E1D60D /* Chiui */; };
+		77BF550E2F7D4D7200E1D60D /* Chiui in Frameworks */ = {isa = PBXBuildFile; productRef = 77BF550D2F7D4D7200E1D60D /* Chiui */; };
+		77BF55652F8535DA00E1D60D /* Chiui in Frameworks */ = {isa = PBXBuildFile; productRef = 77BF55642F8535DA00E1D60D /* Chiui */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,8 +61,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				77BF55082F7D4D2100E1D60D /* Chiui in Frameworks */,
 				774570BB2DDD0216004AB32E /* Chiui in Frameworks */,
 				77BF54992F7579CE00E1D60D /* Chiui in Frameworks */,
+				77BF55652F8535DA00E1D60D /* Chiui in Frameworks */,
+				77BF550B2F7D4D6400E1D60D /* Chiui in Frameworks */,
+				77BF550E2F7D4D7200E1D60D /* Chiui in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -121,6 +129,10 @@
 			packageProductDependencies = (
 				774570BA2DDD0216004AB32E /* Chiui */,
 				77BF54982F7579CE00E1D60D /* Chiui */,
+				77BF55072F7D4D2100E1D60D /* Chiui */,
+				77BF550A2F7D4D6400E1D60D /* Chiui */,
+				77BF550D2F7D4D7200E1D60D /* Chiui */,
+				77BF55642F8535DA00E1D60D /* Chiui */,
 			);
 			productName = DiaryApp;
 			productReference = 774570542DDCFF04004AB32E /* DiaryApp.app */;
@@ -180,7 +192,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1620;
-				LastUpgradeCheck = 1620;
+				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					774570532DDCFF04004AB32E = {
 						CreatedOnToolsVersion = 16.2;
@@ -205,7 +217,7 @@
 			mainGroup = 7745704B2DDCFF04004AB32E;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				77BF54972F7579CE00E1D60D /* XCLocalSwiftPackageReference "../../../Chiui" */,
+				77BF55632F8535DA00E1D60D /* XCRemoteSwiftPackageReference "chiui" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 774570552DDCFF04004AB32E /* Products */;
@@ -315,6 +327,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -337,6 +350,7 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -376,6 +390,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -391,6 +406,7 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
 			name = Release;
@@ -403,8 +419,11 @@
 				CODE_SIGN_ENTITLEMENTS = DiaryApp/DiaryApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"DiaryApp/Preview Content\"";
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -440,8 +459,11 @@
 				CODE_SIGN_ENTITLEMENTS = DiaryApp/DiaryApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"DiaryApp/Preview Content\"";
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -475,6 +497,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				MACOSX_DEPLOYMENT_TARGET = 15.2;
@@ -497,6 +520,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				MACOSX_DEPLOYMENT_TARGET = 15.2;
@@ -518,6 +542,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				MACOSX_DEPLOYMENT_TARGET = 15.2;
@@ -539,6 +564,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				MACOSX_DEPLOYMENT_TARGET = 15.2;
@@ -596,12 +622,16 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCLocalSwiftPackageReference section */
-		77BF54972F7579CE00E1D60D /* XCLocalSwiftPackageReference "../../../Chiui" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../../../Chiui;
+/* Begin XCRemoteSwiftPackageReference section */
+		77BF55632F8535DA00E1D60D /* XCRemoteSwiftPackageReference "chiui" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/den-ree/chiui";
+			requirement = {
+				kind = exactVersion;
+				version = 1.0.1;
+			};
 		};
-/* End XCLocalSwiftPackageReference section */
+/* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		774570BA2DDD0216004AB32E /* Chiui */ = {
@@ -610,6 +640,23 @@
 		};
 		77BF54982F7579CE00E1D60D /* Chiui */ = {
 			isa = XCSwiftPackageProductDependency;
+			productName = Chiui;
+		};
+		77BF55072F7D4D2100E1D60D /* Chiui */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Chiui;
+		};
+		77BF550A2F7D4D6400E1D60D /* Chiui */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Chiui;
+		};
+		77BF550D2F7D4D7200E1D60D /* Chiui */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Chiui;
+		};
+		77BF55642F8535DA00E1D60D /* Chiui */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 77BF55632F8535DA00E1D60D /* XCRemoteSwiftPackageReference "chiui" */;
 			productName = Chiui;
 		};
 /* End XCSwiftPackageProductDependency section */
