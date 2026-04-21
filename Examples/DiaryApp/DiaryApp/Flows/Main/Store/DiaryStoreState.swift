@@ -30,12 +30,8 @@ struct EntryInput: Equatable {
   }
 }
 
-/// Actions that can be performed on the diary store
 enum DiaryAction: Equatable {
-  /// Add a new diary entry
   case addEntry(DiaryEntry)
-  /// Remove a diary entry by its ID
   case removeEntry(UUID)
-  /// Update an existing diary entry
   case updateEntry(DiaryEntry)
 }

@@ -1,13 +1,9 @@
 import SwiftUI
 import Chiui
 
-/// View for displaying the list of diary entries
 struct DiaryListView: ContextualView {
-  /// View model for the diary list
   @StateObject var viewModel: DiaryListViewModel
 
-  /// Creates a new diary list view
-  /// - Parameter viewModel: View model to use
   init(_ context: DiaryContext) {
     _viewModel = .init(wrappedValue: .init(context))
   }
