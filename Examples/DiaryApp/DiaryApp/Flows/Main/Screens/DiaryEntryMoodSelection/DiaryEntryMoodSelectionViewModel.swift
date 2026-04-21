@@ -4,8 +4,6 @@ import Chiui
 final class DiaryEntryMoodSelectionViewModel: ContextViewModel<DiaryContext, DiaryEntryMoodSelectionViewModel.State> {
   struct State: ContextualViewState {
     var selectedMood: DiaryEntryMood = .okay
-
-    init() {}
   }
 
   nonisolated override func didStoreUpdate(_ storeState: DiaryStoreState) async {

@@ -4,8 +4,6 @@ import Chiui
 final class DiaryEntryDateSelectionViewModel: ContextViewModel<DiaryContext, DiaryEntryDateSelectionViewModel.State> {
   struct State: ContextualViewState {
     var selectedDate: Date = .now
-
-    init() {}
   }
 
   nonisolated override func didStoreUpdate(_ storeState: DiaryStoreState) async {

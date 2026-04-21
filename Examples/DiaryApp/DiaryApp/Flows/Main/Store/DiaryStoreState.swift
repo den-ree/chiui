@@ -4,8 +4,8 @@ import Chiui
 struct DiaryStoreState: ContextualStoreState {
   var entries: [DiaryEntry] = []
   var entrySelectionMode: EntrySelectionMode = .no
-  var entryDraftDate: Date? = nil
-  var entryDraftMood: DiaryEntryMood? = nil
+  var entryDraftDate: Date?
+  var entryDraftMood: DiaryEntryMood?
   var isSelectingEntryDate: Bool = false
   var isSelectingEntryMood: Bool = false
   var isSavingChanges: Bool = false
