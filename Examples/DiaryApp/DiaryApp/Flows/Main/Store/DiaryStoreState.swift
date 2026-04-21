@@ -1,13 +1,13 @@
 import Foundation
 import Chiui
 
-/// Represents the global state of the diary application
 struct DiaryStoreState: ContextualStoreState {
-  /// Collection of all diary entries
   var entries: [DiaryEntry] = []
   var entrySelectionMode: EntrySelectionMode = .no
   var entryDraftDate: Date? = nil
+  var entryDraftMood: DiaryEntryMood? = nil
   var isSelectingEntryDate: Bool = false
+  var isSelectingEntryMood: Bool = false
   var isSavingChanges: Bool = false
 }
 

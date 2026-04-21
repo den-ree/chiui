@@ -1,11 +1,8 @@
 import SwiftUI
 import Chiui
 
-/// View for adding a new diary entry
 struct DiaryEntryView: ContextualView {
-  /// View model for adding diary entries
   @StateObject var viewModel: DiaryEntryViewModel
-  /// Focus state for tracking which field is being edited
   @FocusState private var focusedField: Field?
 
   enum Field: Equatable {
@@ -13,8 +10,6 @@ struct DiaryEntryView: ContextualView {
     case content
   }
 
-  /// Creates a new add diary entry view
-  /// - Parameter viewModel: View model to use
   init(_ context: DiaryContext) {
     _viewModel = .init(wrappedValue: .init(context))
   }
@@ -31,6 +26,20 @@ struct DiaryEntryView: ContextualView {
               Text("Entry Date")
               Spacer()
               Text(state.selectedDate, style: .date)
+                .foregroundStyle(.secondary)
+            }
+          }
+        }
+
+        Section(header: Text("Mood")) {
+          Button {
+            focusedField = nil
+            viewModel.openMoodSelection()
+          } label: {
+            HStack {
+              Text("Mood")
+              Spacer()
+              Text(state.selectedMood.title)
                 .foregroundStyle(.secondary)
             }
           }
@@ -84,6 +93,9 @@ struct DiaryEntryView: ContextualView {
         isPresented: bindTo(\.isDateSelectionPresented) { _ in }
       ) {
         DiaryEntryDateSelectionView(viewModel.context)
+      }
+      .sheet(isPresented: bindTo(\.isMoodSelectionPresented) { _ in }) {
+        DiaryEntryMoodSelectionView(viewModel.context)
       }
 
       if state.savingStatus == .saving {

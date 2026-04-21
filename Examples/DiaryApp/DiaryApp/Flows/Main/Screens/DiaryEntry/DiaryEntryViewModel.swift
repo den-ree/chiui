@@ -9,14 +9,15 @@ final class DiaryEntryViewModel: ContextViewModel<DiaryContext, DiaryEntryViewMo
     case saved
   }
 
-  /// State for the add diary entry screen
   struct State: ContextualViewState {
     var title: String = ""
     var content: String = ""
     var selectedDate: Date = .now
+    var selectedMood: DiaryEntryMood = .okay
     var savingStatus: SavingStatus = .no
     var isEditing: Bool = false
     var isDateSelectionPresented: Bool = false
+    var isMoodSelectionPresented: Bool = false
     var entryTitle: String = ""
 
     var isSavingDisabled: Bool {
@@ -30,14 +31,10 @@ final class DiaryEntryViewModel: ContextViewModel<DiaryContext, DiaryEntryViewMo
     init() {}
   }
 
-  /// Creates a new add diary entry view model
-  /// - Parameter context: The diary context to use
   override init(_ context: DiaryContext) {
     super.init(context)
   }
 
-  /// Transforms the store state into the view state
-  /// - Parameter storeState: Current store state
   nonisolated override func didStoreUpdate(
     _ storeState: DiaryStoreState
   ) async {
@@ -48,19 +45,20 @@ final class DiaryEntryViewModel: ContextViewModel<DiaryContext, DiaryEntryViewMo
       case .addingNew:
         state.entryTitle = "New Entry"
         state.selectedDate = storeState.entryDraftDate ?? .now
+        state.selectedMood = storeState.entryDraftMood ?? .okay
       case let .selecting(entry):
         state.title = entry.title
         state.content = entry.content
         state.selectedDate = storeState.entryDraftDate ?? entry.createdAt
+        state.selectedMood = storeState.entryDraftMood ?? entry.mood
         state.entryTitle = entry.title
       case .no:
         break
       }
       state.isDateSelectionPresented = storeState.isSelectingEntryDate
+      state.isMoodSelectionPresented = storeState.isSelectingEntryMood
     }
   }
-
-  // MARK: - Actions
 
   func updateTitle(_ title: String) {
     updateState { state in
@@ -90,6 +88,35 @@ final class DiaryEntryViewModel: ContextViewModel<DiaryContext, DiaryEntryViewMo
         self.updateStore { storeState in
           storeState.entryDraftDate = change.newState.selectedDate
           storeState.isSelectingEntryDate = true
+        }
+      }
+    }
+  }
+
+  func openMoodSelection() {
+    Task {
+      await updateState { state in
+        state.isEditing = true
+      }.then { [weak self] change in
+        guard let self else { return }
+
+        self.updateStore { storeState in
+          storeState.entryDraftMood = change.newState.selectedMood
+          storeState.isSelectingEntryMood = true
+        }
+      }
+    }
+  }
+
+  func updateSelectedMood(_ mood: DiaryEntryMood) {
+    Task {
+      await updateState { state in
+        state.selectedMood = mood
+        state.isEditing = true
+      }.then { [weak self] change in
+        guard let self, change.hasChanged else { return }
+        self.updateStore { storeState in
+          storeState.entryDraftMood = change.newState.selectedMood
         }
       }
     }
@@ -135,7 +162,8 @@ final class DiaryEntryViewModel: ContextViewModel<DiaryContext, DiaryEntryViewMo
         id: .init(),
         title: state.title,
         content: state.content,
-        createdAt: state.selectedDate
+        createdAt: state.selectedDate,
+        mood: state.selectedMood
       )
 
       self.updateStore { storeState in
@@ -146,21 +174,20 @@ final class DiaryEntryViewModel: ContextViewModel<DiaryContext, DiaryEntryViewMo
           let updatedEntry = existingEntry.new(
             title: newEntry.title,
             content: newEntry.content,
-            createdAt: state.selectedDate
+            createdAt: state.selectedDate,
+            mood: state.selectedMood
           )
           storeState.entries = storeState.entries.map { $0.id == existingEntry.id ? updatedEntry : $0 }
         case .no:
           break
         }
       }
-      // Simulate loading work via a non-Sendable client.
       await self.context.loadingClient.simulateLoadingWork()
       await markAsSaved()
     }
   }
 
   func markAsSaved() async {
-    // Example of waiting
     await updateState { state in
       state.savingStatus = .saved
       state.isEditing = false
@@ -168,7 +195,9 @@ final class DiaryEntryViewModel: ContextViewModel<DiaryContext, DiaryEntryViewMo
       self?.updateStore { storeState in
         storeState.entrySelectionMode = .no
         storeState.isSelectingEntryDate = false
+        storeState.isSelectingEntryMood = false
         storeState.entryDraftDate = nil
+        storeState.entryDraftMood = nil
       }
     }
   }
