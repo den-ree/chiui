@@ -15,7 +15,7 @@ Add the following to your `Package.swift` file:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/den-ree/chiui", from: "1.0.1")
+    .package(url: "https://github.com/den-ree/chiui", from: "1.0.2")
 ]
 ```
 
