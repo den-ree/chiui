@@ -1,11 +1,13 @@
 import Foundation
 import Chiui
 
-/// Represents the global state of the diary application
 struct DiaryStoreState: ContextualStoreState {
-  /// Collection of all diary entries
   var entries: [DiaryEntry] = []
   var entrySelectionMode: EntrySelectionMode = .no
+  var entryDraftDate: Date?
+  var entryDraftMood: DiaryEntryMood?
+  var isSelectingEntryDate: Bool = false
+  var isSelectingEntryMood: Bool = false
   var isSavingChanges: Bool = false
 }
 
@@ -28,12 +30,8 @@ struct EntryInput: Equatable {
   }
 }
 
-/// Actions that can be performed on the diary store
 enum DiaryAction: Equatable {
-  /// Add a new diary entry
   case addEntry(DiaryEntry)
-  /// Remove a diary entry by its ID
   case removeEntry(UUID)
-  /// Update an existing diary entry
   case updateEntry(DiaryEntry)
 }

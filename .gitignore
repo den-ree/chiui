@@ -31,6 +31,7 @@ Package.resolved
 *.xcuserstate
 **/*.xcworkspace/xcshareddata/
 **/*.xcworkspace/contents.xcworkspacedata
+**/.derivedData
 
 # blanche
 context/

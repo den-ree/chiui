@@ -2,17 +2,11 @@ import Foundation
 import Chiui
 import SwiftUI
 
-/// View model for the diary list screen
 final class DiaryListViewModel: ContextViewModel<DiaryContext, DiaryListViewModel.State> {
-  /// State for the diary list screen
   struct State: ContextualViewState {
-    /// Collection of diary entries to display
     var entries: [DiaryEntry] = []
-    /// Currently selected entry for navigation
     var selectedEntryId: UUID?
-    /// Whether we're adding a new entry
     var isAddingNew: Bool = false
-    /// Local UI state
     var isRefreshing: Bool = false
 
     func entry(at index: Int) -> DiaryEntry {
@@ -22,14 +16,10 @@ final class DiaryListViewModel: ContextViewModel<DiaryContext, DiaryListViewMode
     init() {}
   }
 
-  /// Creates a new diary list view model
-  /// - Parameter context: The diary context to use
   override init(_ context: DiaryContext) {
     super.init(context)
   }
 
-  /// Transforms the store state into the view state
-  /// - Parameter storeState: Current store state
   nonisolated override func didStoreUpdate(
     _ storeState: DiaryStoreState
   ) async {
@@ -44,8 +34,6 @@ final class DiaryListViewModel: ContextViewModel<DiaryContext, DiaryListViewMode
     }
   }
 
-  // MARK: - Actions
-
   func selectEntry(_ entry: DiaryEntry) {
     updateStore { storeState in
       storeState.entrySelectionMode = .selecting(entry)
@@ -58,6 +46,16 @@ final class DiaryListViewModel: ContextViewModel<DiaryContext, DiaryListViewMode
     }
   }
 
+  func isEntryDestinationPresented() -> Bool {
+    state.selectedEntryId != nil
+  }
+
+  func setEntryDestinationPresented(_ isPresented: Bool) {
+    if !isPresented {
+      clearSelection()
+    }
+  }
+
   func startAddingNew() {
     updateStore { storeState in
       storeState.entrySelectionMode = .addingNew
@@ -65,8 +63,16 @@ final class DiaryListViewModel: ContextViewModel<DiaryContext, DiaryListViewMode
   }
 
   func finishAddingNew() {
-    updateState { state in
-      state.isAddingNew = false
+    updateStore { storeState in
+      if storeState.entrySelectionMode == .addingNew {
+        storeState.entrySelectionMode = .no
+      }
+    }
+  }
+
+  func setAddingNewDestinationPresented(_ isPresented: Bool) {
+    if !isPresented {
+      finishAddingNew()
     }
   }
 

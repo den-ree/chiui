@@ -1,13 +1,8 @@
 import SwiftUI
 import Chiui
 
-/// View for adding a new diary entry
 struct DiaryEntryView: ContextualView {
-  /// View model for adding diary entries
   @StateObject var viewModel: DiaryEntryViewModel
-  /// Environment presentation mode for dismissing the view
-  @Environment(\.presentationMode) private var presentationMode
-  /// Focus state for tracking which field is being edited
   @FocusState private var focusedField: Field?
 
   enum Field: Equatable {
@@ -15,8 +10,6 @@ struct DiaryEntryView: ContextualView {
     case content
   }
 
-  /// Creates a new add diary entry view
-  /// - Parameter viewModel: View model to use
   init(_ context: DiaryContext) {
     _viewModel = .init(wrappedValue: .init(context))
   }
@@ -24,6 +17,34 @@ struct DiaryEntryView: ContextualView {
   var body: some View {
     ZStack {
       Form {
+        Section(header: Text("Date")) {
+          Button {
+            focusedField = nil
+            viewModel.openDateSelection()
+          } label: {
+            HStack {
+              Text("Entry Date")
+              Spacer()
+              Text(state.selectedDate, style: .date)
+                .foregroundStyle(.secondary)
+            }
+          }
+        }
+
+        Section(header: Text("Mood")) {
+          Button {
+            focusedField = nil
+            viewModel.openMoodSelection()
+          } label: {
+            HStack {
+              Text("Mood")
+              Spacer()
+              Text(state.selectedMood.title)
+                .foregroundStyle(.secondary)
+            }
+          }
+        }
+
         Section(header: Text("Title")) {
           TextField("Enter title", text: bindTo(\.title) { viewModel.updateTitle($0) })
           .focused($focusedField, equals: .title)
@@ -68,10 +89,13 @@ struct DiaryEntryView: ContextualView {
           }
         }
       }
-      .onChange(of: state.shouldDismiss) { _, newValue in
-        if newValue {
-          presentationMode.wrappedValue.dismiss()
-        }
+      .navigationDestination(
+        isPresented: bindTo(\.isDateSelectionPresented) { _ in }
+      ) {
+        DiaryEntryDateSelectionView(viewModel.context)
+      }
+      .sheet(isPresented: bindTo(\.isMoodSelectionPresented) { _ in }) {
+        DiaryEntryMoodSelectionView(viewModel.context)
       }
 
       if state.savingStatus == .saving {
