@@ -168,4 +168,3 @@ public struct ContextualStateChange<State: ContextualState>: Equatable, Sendable
   /// Whether the state actually changed values.
   public var hasChanged: Bool { oldState != newState }
 }
-

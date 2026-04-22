@@ -42,17 +42,25 @@ final class DiaryListViewModel: ContextViewModel<
   }
 
   override class func respond(to action: Action, state: inout State) -> Effect? {
-    switch action {
-    case .storeChanged(let storeState):
-      state.entries = storeState.entries.sorted { $0.createdAt > $1.createdAt }
-      state.isAddingNew = storeState.entrySelectionMode == .addingNew
-      if case let .selecting(selectedEntry) = storeState.entrySelectionMode {
-        state.selectedEntryId = selectedEntry.id
-      } else {
-        state.selectedEntryId = nil
-      }
+    if case let .storeChanged(storeState) = action {
+      applyStoreState(storeState, to: &state)
       return nil
+    }
+    return respondToUIAction(action, state: &state)
+  }
 
+  private class func applyStoreState(_ storeState: DiaryStoreState, to state: inout State) {
+    state.entries = storeState.entries.sorted { $0.createdAt > $1.createdAt }
+    state.isAddingNew = storeState.entrySelectionMode == .addingNew
+    if case let .selecting(selectedEntry) = storeState.entrySelectionMode {
+      state.selectedEntryId = selectedEntry.id
+    } else {
+      state.selectedEntryId = nil
+    }
+  }
+
+  private class func respondToUIAction(_ action: Action, state: inout State) -> Effect? {
+    switch action {
     case .selectEntry(let entry):
       return .selectEntry(entry)
 
@@ -60,7 +68,7 @@ final class DiaryListViewModel: ContextViewModel<
       return .clearSelection
 
     case .setEntryDestinationPresented(let isPresented):
-      return isPresented ? nil : .clearSelection
+      return effectForEntryDestinationPresentation(isPresented)
 
     case .startAddingNew:
       return .startAddingNew
@@ -69,11 +77,10 @@ final class DiaryListViewModel: ContextViewModel<
       return .finishAddingNew
 
     case .setAddingNewDestinationPresented(let isPresented):
-      return isPresented ? nil : .finishAddingNew
+      return effectForAddingNewDestinationPresentation(isPresented)
 
     case .removeEntryAt(let index):
-      guard state.entries.indices.contains(index) else { return nil }
-      return .removeEntry(state.entries[index].id)
+      return removeEntryEffect(at: index, state: state)
 
     case .removeEntryById(let id):
       return .removeEntry(id)
@@ -81,7 +88,23 @@ final class DiaryListViewModel: ContextViewModel<
     case .refresh:
       state.isRefreshing = true
       return nil
+
+    case .storeChanged:
+      return nil
     }
+  }
+
+  private class func effectForEntryDestinationPresentation(_ isPresented: Bool) -> Effect? {
+    isPresented ? nil : .clearSelection
+  }
+
+  private class func effectForAddingNewDestinationPresentation(_ isPresented: Bool) -> Effect? {
+    isPresented ? nil : .finishAddingNew
+  }
+
+  private class func removeEntryEffect(at index: Int, state: State) -> Effect? {
+    guard state.entries.indices.contains(index) else { return nil }
+    return .removeEntry(state.entries[index].id)
   }
 
   override func handle(_ effect: Effect) async {

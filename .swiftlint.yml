@@ -6,6 +6,11 @@ included:
 excluded:
   - .build
   - .derivedData
+  - Examples/DiaryApp/.derivedData
+  - Examples/DiaryApp/.derivedData/**
+
+disabled_rules:
+  - static_over_final_class
 
 opt_in_rules:
   - explicit_init
@@ -26,6 +31,12 @@ identifier_name:
     - id
     - x
     - y
+
+type_name:
+  min_length: 3
+  max_length:
+    warning: 60
+    error: 80
 
 type_body_length:
   warning: 350
