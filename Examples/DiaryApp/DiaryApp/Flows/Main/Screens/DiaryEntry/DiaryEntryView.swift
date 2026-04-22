@@ -2,7 +2,7 @@ import SwiftUI
 import Chiui
 
 struct DiaryEntryView: ContextualView {
-  @StateObject var viewModel: DiaryEntryViewModel
+  @State var viewModel: DiaryEntryViewModel
   @FocusState private var focusedField: Field?
 
   enum Field: Equatable {
@@ -11,7 +11,7 @@ struct DiaryEntryView: ContextualView {
   }
 
   init(_ context: DiaryContext) {
-    _viewModel = .init(wrappedValue: .init(context))
+    _viewModel = .init(initialValue: .init(context))
   }
 
   var body: some View {
@@ -20,7 +20,7 @@ struct DiaryEntryView: ContextualView {
         Section(header: Text("Date")) {
           Button {
             focusedField = nil
-            viewModel.openDateSelection()
+            send(.openDateSelection)
           } label: {
             HStack {
               Text("Entry Date")
@@ -34,7 +34,7 @@ struct DiaryEntryView: ContextualView {
         Section(header: Text("Mood")) {
           Button {
             focusedField = nil
-            viewModel.openMoodSelection()
+            send(.openMoodSelection)
           } label: {
             HStack {
               Text("Mood")
@@ -45,23 +45,37 @@ struct DiaryEntryView: ContextualView {
           }
         }
 
+        Section(header: Text("Location")) {
+          Button {
+            focusedField = nil
+            send(.openLocationSelection)
+          } label: {
+            HStack {
+              Text("Location")
+              Spacer()
+              Text(state.selectedLocation.isEmpty ? "No location" : state.selectedLocation)
+                .foregroundStyle(.secondary)
+            }
+          }
+        }
+
         Section(header: Text("Title")) {
-          TextField("Enter title", text: bindTo(\.title) { viewModel.updateTitle($0) })
+          TextField("Enter title", text: bindTo(\.title) { .titleChanged($0) })
           .focused($focusedField, equals: .title)
           .onChange(of: focusedField) { _, newValue in
             if newValue == .title {
-              viewModel.startEditing()
+              send(.startEditing)
             }
           }
         }
 
         Section(header: Text("Content")) {
-          TextEditor(text: bindTo(\.content) { viewModel.updateContent($0) })
+          TextEditor(text: bindTo(\.content) { .contentChanged($0) })
           .frame(minHeight: 200)
           .focused($focusedField, equals: .content)
           .onChange(of: focusedField) { _, newValue in
             if newValue == .content {
-              viewModel.startEditing()
+              send(.startEditing)
             }
           }
         }
@@ -72,30 +86,31 @@ struct DiaryEntryView: ContextualView {
           ToolbarItem(placement: .navigationBarLeading) {
             Button("Cancel") {
               focusedField = nil
-              Task {
-                await viewModel.finishEditing(save: false)
-              }
+              send(.finishRequested(save: false))
             }
           }
 
           ToolbarItem(placement: .navigationBarTrailing) {
             Button("Save") {
               focusedField = nil
-              Task {
-                await viewModel.finishEditing(save: true)
-              }
+              send(.finishRequested(save: true))
             }
             .disabled(state.isSavingDisabled)
           }
         }
       }
       .navigationDestination(
-        isPresented: bindTo(\.isDateSelectionPresented) { _ in }
+        isPresented: Binding(get: { state.isDateSelectionPresented }, set: { _ in })
       ) {
         DiaryEntryDateSelectionView(viewModel.context)
       }
-      .sheet(isPresented: bindTo(\.isMoodSelectionPresented) { _ in }) {
+      .sheet(isPresented: Binding(get: { state.isMoodSelectionPresented }, set: { _ in })) {
         DiaryEntryMoodSelectionView(viewModel.context)
+      }
+      .sheet(isPresented: Binding(get: { state.isLocationSelectionPresented }, set: { _ in })) {
+        NavigationStack {
+          DiaryEntryLocationSelectionView(viewModel.context)
+        }
       }
 
       if state.savingStatus == .saving {

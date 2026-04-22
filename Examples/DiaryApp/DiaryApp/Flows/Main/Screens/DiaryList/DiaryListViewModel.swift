@@ -1,8 +1,12 @@
 import Foundation
 import Chiui
-import SwiftUI
 
-final class DiaryListViewModel: ContextViewModel<DiaryContext, DiaryListViewModel.State> {
+final class DiaryListViewModel: ContextViewModel<
+  DiaryContext,
+  DiaryListViewModel.State,
+  DiaryListViewModel.Action,
+  DiaryListViewModel.Effect
+> {
   struct State: ContextualViewState {
     var entries: [DiaryEntry] = []
     var selectedEntryId: UUID?
@@ -16,14 +20,30 @@ final class DiaryListViewModel: ContextViewModel<DiaryContext, DiaryListViewMode
     init() {}
   }
 
-  override init(_ context: DiaryContext) {
-    super.init(context)
+  enum Action: Equatable, ContextualAction {
+    case storeChanged(DiaryStoreState)
+    case selectEntry(DiaryEntry)
+    case clearSelection
+    case setEntryDestinationPresented(Bool)
+    case startAddingNew
+    case finishAddingNew
+    case setAddingNewDestinationPresented(Bool)
+    case removeEntryAt(Int)
+    case removeEntryById(UUID)
+    case refresh
   }
 
-  nonisolated override func didStoreUpdate(
-    _ storeState: DiaryStoreState
-  ) async {
-    await updateState { state in
+  enum Effect {
+    case selectEntry(DiaryEntry)
+    case clearSelection
+    case startAddingNew
+    case finishAddingNew
+    case removeEntry(UUID)
+  }
+
+  override class func respond(to action: Action, state: inout State) -> Effect? {
+    switch action {
+    case .storeChanged(let storeState):
       state.entries = storeState.entries.sorted { $0.createdAt > $1.createdAt }
       state.isAddingNew = storeState.entrySelectionMode == .addingNew
       if case let .selecting(selectedEntry) = storeState.entrySelectionMode {
@@ -31,72 +51,67 @@ final class DiaryListViewModel: ContextViewModel<DiaryContext, DiaryListViewMode
       } else {
         state.selectedEntryId = nil
       }
+      return nil
+
+    case .selectEntry(let entry):
+      return .selectEntry(entry)
+
+    case .clearSelection:
+      return .clearSelection
+
+    case .setEntryDestinationPresented(let isPresented):
+      return isPresented ? nil : .clearSelection
+
+    case .startAddingNew:
+      return .startAddingNew
+
+    case .finishAddingNew:
+      return .finishAddingNew
+
+    case .setAddingNewDestinationPresented(let isPresented):
+      return isPresented ? nil : .finishAddingNew
+
+    case .removeEntryAt(let index):
+      guard state.entries.indices.contains(index) else { return nil }
+      return .removeEntry(state.entries[index].id)
+
+    case .removeEntryById(let id):
+      return .removeEntry(id)
+
+    case .refresh:
+      state.isRefreshing = true
+      return nil
     }
   }
 
-  func selectEntry(_ entry: DiaryEntry) {
-    updateStore { storeState in
-      storeState.entrySelectionMode = .selecting(entry)
-    }
-  }
+  override func handle(_ effect: Effect) async {
+    switch effect {
+    case .selectEntry(let entry):
+      await updateStore { storeState in
+        storeState.entrySelectionMode = .selecting(entry)
+      }
 
-  func clearSelection() {
-    updateStore { storeState in
-      storeState.entrySelectionMode = .no
-    }
-  }
-
-  func isEntryDestinationPresented() -> Bool {
-    state.selectedEntryId != nil
-  }
-
-  func setEntryDestinationPresented(_ isPresented: Bool) {
-    if !isPresented {
-      clearSelection()
-    }
-  }
-
-  func startAddingNew() {
-    updateStore { storeState in
-      storeState.entrySelectionMode = .addingNew
-    }
-  }
-
-  func finishAddingNew() {
-    updateStore { storeState in
-      if storeState.entrySelectionMode == .addingNew {
+    case .clearSelection:
+      await updateStore { storeState in
         storeState.entrySelectionMode = .no
       }
-    }
-  }
 
-  func setAddingNewDestinationPresented(_ isPresented: Bool) {
-    if !isPresented {
-      finishAddingNew()
-    }
-  }
+    case .startAddingNew:
+      await updateStore { storeState in
+        storeState.entrySelectionMode = .addingNew
+      }
 
-  func removeEntry(at index: Int) {
-    Task {
-      await scopeState({ $0 }, { [weak self] state in
-        let entry = state.entry(at: index)
-
-        self?.updateStore { storeState in
-          storeState.entries.removeAll { $0.id == entry.id }
+    case .finishAddingNew:
+      await updateStore { storeState in
+        if storeState.entrySelectionMode == .addingNew {
+          storeState.entrySelectionMode = .no
         }
-      })
-    }
-  }
+      }
 
-  func removeEntryById(_ id: UUID) {
-    updateStore { storeState in
-      storeState.entries.removeAll { $0.id == id }
-    }
-  }
-
-  func refresh() {
-    updateState { state in
-      state.isRefreshing = true
+    case .removeEntry(let id):
+      await updateStore { storeState in
+        storeState.entries.removeAll { $0.id == id }
+      }
     }
   }
 }

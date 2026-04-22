@@ -2,10 +2,10 @@ import SwiftUI
 import Chiui
 
 struct DiaryEntryMoodSelectionView: ContextualView {
-  @StateObject var viewModel: DiaryEntryMoodSelectionViewModel
+  @State var viewModel: DiaryEntryMoodSelectionViewModel
 
   init(_ context: DiaryContext) {
-    _viewModel = .init(wrappedValue: .init(context))
+    _viewModel = .init(initialValue: .init(context))
   }
 
   var body: some View {
@@ -19,13 +19,13 @@ struct DiaryEntryMoodSelectionView: ContextualView {
       .toolbar {
         ToolbarItem(placement: .navigationBarLeading) {
           Button("Cancel") {
-            viewModel.cancelSelection()
+            send(.cancelSelection)
           }
         }
 
         ToolbarItem(placement: .navigationBarTrailing) {
           Button("Done") {
-            viewModel.confirmSelection()
+            send(.confirmSelection)
           }
         }
       }
@@ -35,7 +35,7 @@ struct DiaryEntryMoodSelectionView: ContextualView {
   @ViewBuilder
   private func moodRow(_ mood: DiaryEntryMood) -> some View {
     Button {
-      viewModel.updateSelectedMood(mood)
+      send(.selectedMoodChanged(mood))
     } label: {
       HStack {
         Text(mood.title)

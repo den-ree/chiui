@@ -34,17 +34,17 @@ final class DiaryEntryDateSelectionViewModelTests: XCTestCase {
 
     try? await Task.sleep(for: .seconds(0.1))
 
-    XCTAssertEqual(sut.viewState.selectedDate, draftDate)
+    XCTAssertEqual(sut.state.selectedDate, draftDate)
   }
 
   @MainActor
   func testUpdateSelectedDateUpdatesStoreDraft() async {
     let selectedDate = Date(timeIntervalSince1970: 1_760_000_000)
 
-    sut.updateSelectedDate(selectedDate)
+    await sut.sendAwaitingEffects(.selectedDateChanged(selectedDate))
     try? await Task.sleep(for: .seconds(0.1))
 
-    XCTAssertEqual(sut.viewState.selectedDate, selectedDate)
+    XCTAssertEqual(sut.state.selectedDate, selectedDate)
     let storeState = await context.store.state
     XCTAssertEqual(storeState.entryDraftDate, selectedDate)
   }
@@ -55,7 +55,7 @@ final class DiaryEntryDateSelectionViewModelTests: XCTestCase {
       state.isSelectingEntryDate = true
     }
 
-    sut.confirmSelection()
+    await sut.sendAwaitingEffects(.confirmSelection)
     try? await Task.sleep(for: .seconds(0.1))
 
     let storeState = await context.store.state
@@ -68,10 +68,19 @@ final class DiaryEntryDateSelectionViewModelTests: XCTestCase {
       state.isSelectingEntryDate = true
     }
 
-    sut.cancelSelection()
+    await sut.sendAwaitingEffects(.cancelSelection)
     try? await Task.sleep(for: .seconds(0.1))
 
     let storeState = await context.store.state
     XCTAssertFalse(storeState.isSelectingEntryDate)
+  }
+
+  @MainActor
+  func testReducerProducesPersistEffect() {
+    var state = DiaryEntryDateSelectionViewModel.State()
+    let date = Date(timeIntervalSince1970: 1_760_000_000)
+    let effect = DiaryEntryDateSelectionViewModel.respond(to: .selectedDateChanged(date), state: &state)
+    XCTAssertEqual(state.selectedDate, date)
+    XCTAssertEqual(effect, .persistDraftDate(date))
   }
 }

@@ -2,10 +2,10 @@ import SwiftUI
 import Chiui
 
 struct DiaryListView: ContextualView {
-  @StateObject var viewModel: DiaryListViewModel
+  @State var viewModel: DiaryListViewModel
 
   init(_ context: DiaryContext) {
-    _viewModel = .init(wrappedValue: .init(context))
+    _viewModel = .init(initialValue: .init(context))
   }
 
   var body: some View {
@@ -13,7 +13,7 @@ struct DiaryListView: ContextualView {
       List {
         ForEach(state.entries) { entry in
           Button {
-            viewModel.selectEntry(entry)
+            send(.selectEntry(entry))
           } label: {
             VStack(alignment: .leading, spacing: 8) {
               Text(entry.title)
@@ -33,7 +33,7 @@ struct DiaryListView: ContextualView {
         }
         .onDelete { indexSet in
           for index in indexSet {
-            viewModel.removeEntry(at: index)
+            send(.removeEntryAt(index))
           }
         }
       }
@@ -41,7 +41,7 @@ struct DiaryListView: ContextualView {
       .toolbar {
         ToolbarItem(placement: .navigationBarTrailing) {
           Button {
-            viewModel.startAddingNew()
+            send(.startAddingNew)
           } label: {
             Image(systemName: "plus")
           }
@@ -49,14 +49,16 @@ struct DiaryListView: ContextualView {
       }
       .navigationDestination(
         isPresented: Binding(
-          get: { viewModel.isEntryDestinationPresented() },
-          set: { viewModel.setEntryDestinationPresented($0) }
+          get: { state.selectedEntryId != nil },
+          set: { isPresented in
+            send(.setEntryDestinationPresented(isPresented))
+          }
         )
       ) {
         DiaryEntryView(viewModel.context)
       }
       .navigationDestination(
-        isPresented: bindTo(\.isAddingNew) { viewModel.setAddingNewDestinationPresented($0) }
+        isPresented: bindTo(\.isAddingNew) { .setAddingNewDestinationPresented($0) }
       ) {
         DiaryEntryView(viewModel.context)
       }

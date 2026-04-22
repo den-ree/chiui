@@ -26,82 +26,84 @@ final class DiaryEntryViewModelTests: XCTestCase {
 
   @MainActor
   func testInitialState() async {
-    XCTAssertEqual(sut.viewState.title, "")
-    XCTAssertEqual(sut.viewState.content, "")
-    XCTAssertEqual(sut.viewState.savingStatus, .no)
-    XCTAssertFalse(sut.viewState.isEditing)
-    XCTAssertFalse(sut.viewState.isDateSelectionPresented)
-    XCTAssertFalse(sut.viewState.isMoodSelectionPresented)
-    XCTAssertEqual(sut.viewState.selectedMood, .okay)
-    XCTAssertEqual(sut.viewState.entryTitle, "")
+    XCTAssertEqual(sut.state.title, "")
+    XCTAssertEqual(sut.state.content, "")
+    XCTAssertEqual(sut.state.savingStatus, .no)
+    XCTAssertFalse(sut.state.isEditing)
+    XCTAssertFalse(sut.state.isDateSelectionPresented)
+    XCTAssertFalse(sut.state.isMoodSelectionPresented)
+    XCTAssertFalse(sut.state.isLocationSelectionPresented)
+    XCTAssertEqual(sut.state.selectedMood, .okay)
+    XCTAssertEqual(sut.state.selectedLocation, "")
+    XCTAssertEqual(sut.state.entryTitle, "")
   }
 
   @MainActor
   func testIsSavingDisabled() async {
-    sut.updateTitle("")
-    XCTAssertTrue(sut.viewState.isSavingDisabled)
+    await sut.sendAwaitingEffects(.titleChanged(""))
+    XCTAssertTrue(sut.state.isSavingDisabled)
 
-    sut.updateTitle("Test Title")
-    XCTAssertFalse(sut.viewState.isSavingDisabled)
+    await sut.sendAwaitingEffects(.titleChanged("Test Title"))
+    XCTAssertFalse(sut.state.isSavingDisabled)
 
-    await sut.finishEditing(save: true)
-    XCTAssertFalse(sut.viewState.isSavingDisabled)
+    await sut.sendAwaitingEffects(.finishRequested(save: true))
+    XCTAssertFalse(sut.state.isSavingDisabled)
   }
 
   @MainActor
   func testUpdateTitle() async {
-    sut.startEditing()
-    sut.updateTitle("Test Title")
-    XCTAssertEqual(sut.viewState.title, "Test Title")
-    XCTAssertTrue(sut.viewState.isEditing)
+    await sut.sendAwaitingEffects(.startEditing)
+    await sut.sendAwaitingEffects(.titleChanged("Test Title"))
+    XCTAssertEqual(sut.state.title, "Test Title")
+    XCTAssertTrue(sut.state.isEditing)
   }
 
   @MainActor
   func testUpdateContent() async {
-    sut.updateContent("Test Content")
-    XCTAssertEqual(sut.viewState.content, "Test Content")
+    await sut.sendAwaitingEffects(.contentChanged("Test Content"))
+    XCTAssertEqual(sut.state.content, "Test Content")
   }
 
   @MainActor
   func testStartEditing() async {
-    sut.startEditing()
+    await sut.sendAwaitingEffects(.startEditing)
     try? await Task.sleep(for: .seconds(0.1))
-    XCTAssertTrue(sut.viewState.isEditing)
+    XCTAssertTrue(sut.state.isEditing)
   }
 
   @MainActor
   func testFinishEditingWithoutSave() async {
-    sut.startEditing()
-    sut.updateTitle("Test Title")
-    sut.updateContent("Test Content")
-    XCTAssertTrue(sut.viewState.isEditing)
+    await sut.sendAwaitingEffects(.startEditing)
+    await sut.sendAwaitingEffects(.titleChanged("Test Title"))
+    await sut.sendAwaitingEffects(.contentChanged("Test Content"))
+    XCTAssertTrue(sut.state.isEditing)
 
-    await sut.finishEditing(save: false)
-    XCTAssertFalse(sut.viewState.isEditing)
+    await sut.sendAwaitingEffects(.finishRequested(save: false))
+    XCTAssertFalse(sut.state.isEditing)
   }
 
   @MainActor
   func testFinishEditingWithSave() async {
-    sut.updateTitle("Test Title")
-    sut.updateContent("Test Content")
+    await sut.sendAwaitingEffects(.titleChanged("Test Title"))
+    await sut.sendAwaitingEffects(.contentChanged("Test Content"))
     try? await Task.sleep(for: .seconds(0.1))
-    XCTAssertFalse(sut.viewState.isEditing)
+    XCTAssertFalse(sut.state.isEditing)
 
-    sut.startEditing()
+    await sut.sendAwaitingEffects(.startEditing)
     try? await Task.sleep(for: .seconds(0.1))
-    XCTAssertTrue(sut.viewState.isEditing)
+    XCTAssertTrue(sut.state.isEditing)
 
-    await sut.finishEditing(save: true)
-    XCTAssertEqual(sut.viewState.savingStatus, .saved)
-    XCTAssertFalse(sut.viewState.isEditing)
+    await sut.sendAwaitingEffects(.finishRequested(save: true))
+    XCTAssertEqual(sut.state.savingStatus, .saved)
+    XCTAssertFalse(sut.state.isEditing)
   }
 
   @MainActor
   func testFinishEditingWithEmptyTitle() async {
-    sut.updateTitle("")
-    await sut.finishEditing(save: true)
-    XCTAssertEqual(sut.viewState.savingStatus, .saved)
-    XCTAssertFalse(sut.viewState.isEditing)
+    await sut.sendAwaitingEffects(.titleChanged(""))
+    await sut.sendAwaitingEffects(.finishRequested(save: true))
+    XCTAssertEqual(sut.state.savingStatus, .saved)
+    XCTAssertFalse(sut.state.isEditing)
     let state = await context.store.state
     XCTAssertEqual(state.entries.count, 0)
   }
@@ -113,11 +115,12 @@ final class DiaryEntryViewModelTests: XCTestCase {
       state.entrySelectionMode = .addingNew
       state.entryDraftDate = selectedDate
       state.entryDraftMood = .great
+      state.entryDraftLocation = "Lisbon"
     }
     try? await Task.sleep(for: .seconds(0.1))
-    sut.updateTitle("Test Title")
-    sut.updateContent("Test Content")
-    await sut.finishEditing(save: true)
+    await sut.sendAwaitingEffects(.titleChanged("Test Title"))
+    await sut.sendAwaitingEffects(.contentChanged("Test Content"))
+    await sut.sendAwaitingEffects(.finishRequested(save: true))
 
     try? await Task.sleep(for: .seconds(2.1))
 
@@ -128,6 +131,7 @@ final class DiaryEntryViewModelTests: XCTestCase {
     XCTAssertEqual(entry.content, "Test Content")
     XCTAssertEqual(entry.createdAt, selectedDate)
     XCTAssertEqual(entry.mood, .great)
+    XCTAssertEqual(entry.location, "Lisbon")
   }
 
   @MainActor
@@ -137,7 +141,8 @@ final class DiaryEntryViewModelTests: XCTestCase {
       title: "Initial Title",
       content: "Initial Content",
       createdAt: .now,
-      mood: .bad
+      mood: .bad,
+      location: "Paris"
     )
     let updatedDate = Date(timeIntervalSince1970: 1_800_000_000)
     await context.store.update { state in
@@ -145,13 +150,14 @@ final class DiaryEntryViewModelTests: XCTestCase {
       state.entrySelectionMode = .selecting(initialEntry)
       state.entryDraftDate = updatedDate
       state.entryDraftMood = .amazing
+      state.entryDraftLocation = "Prague"
     }
 
     try? await Task.sleep(for: .seconds(0.1))
 
-    sut.updateTitle("Updated Title")
-    sut.updateContent("Updated Content")
-    await sut.finishEditing(save: true)
+    await sut.sendAwaitingEffects(.titleChanged("Updated Title"))
+    await sut.sendAwaitingEffects(.contentChanged("Updated Content"))
+    await sut.sendAwaitingEffects(.finishRequested(save: true))
 
     try? await Task.sleep(for: .seconds(2.1))
 
@@ -162,6 +168,7 @@ final class DiaryEntryViewModelTests: XCTestCase {
     XCTAssertEqual(entry.content, "Updated Content")
     XCTAssertEqual(entry.createdAt, updatedDate)
     XCTAssertEqual(entry.mood, .amazing)
+    XCTAssertEqual(entry.location, "Prague")
   }
 
   @MainActor
@@ -170,43 +177,45 @@ final class DiaryEntryViewModelTests: XCTestCase {
       state.entrySelectionMode = .addingNew
     }
     try? await Task.sleep(for: .seconds(0.2))
-    XCTAssertEqual(sut.viewState.entryTitle, "New Entry")
+    XCTAssertEqual(sut.state.entryTitle, "New Entry")
 
     let entry = DiaryEntry(
       id: UUID(),
       title: "Test Title",
       content: "Test Content",
       createdAt: .now,
-      mood: .good
+      mood: .good,
+      location: "Stockholm"
     )
     await context.store.update { state in
       state.entrySelectionMode = .selecting(entry)
     }
     try? await Task.sleep(for: .seconds(0.2))
-    XCTAssertEqual(sut.viewState.entryTitle, "Test Title")
-    XCTAssertEqual(sut.viewState.title, "Test Title")
-    XCTAssertEqual(sut.viewState.content, "Test Content")
-    XCTAssertEqual(sut.viewState.selectedDate, entry.createdAt)
-    XCTAssertEqual(sut.viewState.selectedMood, entry.mood)
+    XCTAssertEqual(sut.state.entryTitle, "Test Title")
+    XCTAssertEqual(sut.state.title, "Test Title")
+    XCTAssertEqual(sut.state.content, "Test Content")
+    XCTAssertEqual(sut.state.selectedDate, entry.createdAt)
+    XCTAssertEqual(sut.state.selectedMood, entry.mood)
+    XCTAssertEqual(sut.state.selectedLocation, entry.location)
 
     await context.store.update { state in
       state.entrySelectionMode = .no
     }
     try? await Task.sleep(for: .seconds(0.2))
-    XCTAssertEqual(sut.viewState.entryTitle, "Test Title")
-    XCTAssertEqual(sut.viewState.title, "Test Title")
-    XCTAssertEqual(sut.viewState.content, "Test Content")
+    XCTAssertEqual(sut.state.entryTitle, "Test Title")
+    XCTAssertEqual(sut.state.title, "Test Title")
+    XCTAssertEqual(sut.state.content, "Test Content")
   }
 
   @MainActor
   func testOpenMoodSelectionSeedsDraftAndPresentsModal() async {
-    sut.updateSelectedMood(.great)
+    await sut.sendAwaitingEffects(.selectedMoodChanged(.great))
     try? await Task.sleep(for: .seconds(0.1))
 
-    sut.openMoodSelection()
+    await sut.sendAwaitingEffects(.openMoodSelection)
     try? await Task.sleep(for: .seconds(0.1))
 
-    XCTAssertTrue(sut.viewState.isMoodSelectionPresented)
+    XCTAssertTrue(sut.state.isMoodSelectionPresented)
     let storeState = await context.store.state
     XCTAssertTrue(storeState.isSelectingEntryMood)
     XCTAssertEqual(storeState.entryDraftMood, .great)
@@ -214,10 +223,10 @@ final class DiaryEntryViewModelTests: XCTestCase {
 
   @MainActor
   func testUpdateSelectedMoodPersistsDraftMood() async {
-    sut.updateSelectedMood(.amazing)
+    await sut.sendAwaitingEffects(.selectedMoodChanged(.amazing))
     try? await Task.sleep(for: .seconds(0.1))
 
-    XCTAssertEqual(sut.viewState.selectedMood, .amazing)
+    XCTAssertEqual(sut.state.selectedMood, .amazing)
     let storeState = await context.store.state
     XCTAssertEqual(storeState.entryDraftMood, .amazing)
   }
@@ -225,12 +234,48 @@ final class DiaryEntryViewModelTests: XCTestCase {
   @MainActor
   func testUpdateSelectedDatePersistsDraftDate() async {
     let date = Date(timeIntervalSince1970: 1_850_000_000)
-    sut.updateSelectedDate(date)
+    await sut.sendAwaitingEffects(.selectedDateChanged(date))
 
     try? await Task.sleep(for: .seconds(0.1))
 
-    XCTAssertEqual(sut.viewState.selectedDate, date)
+    XCTAssertEqual(sut.state.selectedDate, date)
     let storeState = await context.store.state
     XCTAssertEqual(storeState.entryDraftDate, date)
+  }
+
+  @MainActor
+  func testOpenLocationSelectionSeedsDraftAndPresentsModal() async {
+    await sut.sendAwaitingEffects(.selectedLocationChanged("Vienna"))
+    try? await Task.sleep(for: .seconds(0.1))
+
+    await sut.sendAwaitingEffects(.openLocationSelection)
+    try? await Task.sleep(for: .seconds(0.1))
+
+    XCTAssertTrue(sut.state.isLocationSelectionPresented)
+    let storeState = await context.store.state
+    XCTAssertTrue(storeState.isSelectingEntryLocation)
+    XCTAssertEqual(storeState.entryDraftLocation, "Vienna")
+  }
+
+  @MainActor
+  func testUpdateSelectedLocationPersistsDraftLocation() async {
+    await sut.sendAwaitingEffects(.selectedLocationChanged("Seoul"))
+    try? await Task.sleep(for: .seconds(0.1))
+
+    XCTAssertEqual(sut.state.selectedLocation, "Seoul")
+    let storeState = await context.store.state
+    XCTAssertEqual(storeState.entryDraftLocation, "Seoul")
+  }
+
+  @MainActor
+  func testReducerReturnsSaveEffect() async {
+    var state = DiaryEntryViewModel.State()
+    state.title = "Title"
+    let effect = DiaryEntryViewModel.respond(to: .finishRequested(save: true), state: &state)
+    XCTAssertEqual(state.savingStatus, .saving)
+    guard case .performSave = effect else {
+      XCTFail("Expected performSave effect")
+      return
+    }
   }
 }
