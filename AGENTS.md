@@ -8,20 +8,25 @@ This file is intended for both AI agents and human maintainers generating new sc
 
 1. Context owns the coordinator reference (to avoid coordinator/context cycles).
 2. All store mutations go through `ContextViewModel.updateStore(_:)` (or directly through `context.store.update(state:)`).
-3. `ContextViewModel.updateState(_:)` is the only place local view state is mutated; follow-up async work is chained with `then(_:)`.
-4. Store -> view mapping happens in `ContextViewModel.didStoreUpdate(_:)`.
-5. Views wire SwiftUI controls to view state and view model methods via `ContextualView.bindTo`.
+3. `ContextViewModel.send(_:)` is the canonical entry point for user/store actions.
+4. `ContextViewModel.respond(to:state:)` is the only place local view state is mutated.
+5. Async follow-up work runs in `ContextViewModel.handle(_:)`.
+6. Store -> view mapping happens in `ContextViewModel.respond(to:state:)` via `.storeChanged` actions.
+7. Views wire SwiftUI controls to view state and view model actions via `ContextualView.bindTo`.
 
 ## Canonical symbols to use
 
 - Context: conform to `StoreContext`
 - Store: `ContextualStore<StoreState>`
-- View model: subclass `ContextViewModel<Context, ViewState>`
-- Store->View mapping: `didStoreUpdate(_:)`
-- Local state mutation: `updateState(_:) -> ContextualStateSideEffect`
-- Async follow-ups: `then(_:)`
+- View model: subclass `ContextViewModel<Context, ViewState, Action, Effect>`
+- Action contract: `ContextualAction` (`Equatable`, `Sendable`, includes `.storeChanged(StoreState)`)
+- Store->View mapping: `respond(to:state:)` handling `.storeChanged`
+- Action entry point: `send(_:)` (sync; returns `Task<Void, Never>?` when an effect runs — await only when needed)
+- State reducer: `respond(to:state:) -> Effect?`
+- Effect runner: `handle(_:)`
+- Local state primitive: `updateState(_:) -> ContextualStateChange`
 - Snapshotting local state for async work: `scopeState(_:_:)`
-- SwiftUI wiring: `ContextualView` + `bindTo(_ : action:)`
+- SwiftUI wiring: `ContextualView` + `bindTo(_ : action:)` + optional `send(_:)` shorthand on `ContextualView`
 
 ## Step-by-step checklist
 
@@ -47,53 +52,83 @@ final class FeatureContext: StoreContext {
 
 ### 2. Create the ViewModel
 
-- Subclass `ContextViewModel<FeatureContext, FeatureViewModel.State>`.
-- Override `didStoreUpdate(_:)` to map `StoreState` into `State` via `updateState`.
+- Subclass `ContextViewModel<FeatureContext, FeatureViewModel.State, FeatureViewModel.Action, FeatureViewModel.Effect>`.
+- Define `Action` and `Effect`.
+- Implement `respond(to:state:)` for pure state transitions.
+- Implement `handle(_:)` for async side effects.
+- Make `Action` conform to `ContextualAction` with a `.storeChanged(StoreState)` case.
 
 ```swift
-final class FeatureViewModel: ContextViewModel<FeatureContext, FeatureViewModel.State> {
+final class FeatureViewModel: ContextViewModel<
+  FeatureContext,
+  FeatureViewModel.State,
+  FeatureViewModel.Action,
+  FeatureViewModel.Effect
+> {
   struct State: ContextualViewState {
     var value: String = ""
     init() {}
   }
 
-  nonisolated override func didStoreUpdate(_ storeState: FeatureStoreState) async {
-    await updateState { state in
+  enum Action: ContextualAction {
+    case storeChanged(FeatureStoreState)
+    case valueChanged(String)
+    case nextTapped
+  }
+
+  enum Effect {
+    case persistValue(String)
+    case navigateToNext
+  }
+
+  override class func respond(to action: Action, state: inout State) -> Effect? {
+    switch action {
+    case .storeChanged(let storeState):
       state.value = storeState.value
-    }.then { _ in
-      // Optional: run async follow-ups (analytics, navigation prep, etc.)
+      return nil
+    case .valueChanged(let value):
+      state.value = value
+      return .persistValue(value)
+    case .nextTapped:
+      return .navigateToNext
     }
   }
 
-  @MainActor
-  func onNextTapped() {
-    context.coordinator.navigateToNextScreen()
+  override func handle(_ effect: Effect) async {
+    switch effect {
+    case .persistValue(let value):
+      await updateStore { $0.value = value }
+    case .navigateToNext:
+      context.coordinator.navigateToNextScreen()
+    }
   }
 }
 ```
 
 Notes:
-- Use `guard change.hasChanged else { return }` inside `then(_:)` if you only want follow-ups when values changed.
-- `then(_:)` runs on the main actor.
+- Keep `respond(to:state:)` pure (state in, effect out).
+- Use `send(_:)` from views; store updates are delivered as `.storeChanged` actions automatically.
 
 ### 3. Build the View
 
 - Conform to `ContextualView`.
-- Declare `@StateObject var viewModel: YourViewModel`.
-- Bind controls to view state properties using `bindTo` and forward writes to view model methods.
+- Declare `@State var viewModel: YourViewModel`.
+- Bind controls to view state properties using `bindTo`. The trailing closure returns the `Action` to dispatch for the new bound value — Chiui calls `send(_:)` internally.
 
 ```swift
 struct FeatureView: ContextualView {
-  @StateObject var viewModel: FeatureViewModel
+  @State var viewModel: FeatureViewModel
 
   init(_ context: FeatureContext) {
-    _viewModel = .init(wrappedValue: .init(context))
+    _viewModel = .init(initialValue: .init(context))
   }
 
   var body: some View {
     VStack {
-      TextField("Value", text: bindTo(\.value) { viewModel.updateValue($0) })
-      Button("Next") { viewModel.onNextTapped() }
+      TextField("Value", text: bindTo(\.value) { .valueChanged($0) })
+      Button("Next") {
+        send(.nextTapped)
+      }
     }
   }
 }
@@ -114,9 +149,10 @@ final class AppCoordinator {
 
 ## Patterns to avoid (stale names)
 
-- `sideEffect` (use `updateState(_:)` + `.then(_:)` or `scopeState(_:_:)`)
+- `sideEffect`
+- `.then(_:)`
 - `then(wait:)` (not supported)
-- `scopeStateOnStoreChange` (store->view mapping is `didStoreUpdate(_:)`)
+- `scopeStateOnStoreChange` (store->view mapping happens in `respond(.storeChanged(...))`)
 
 ## Optional: Where to look
 
