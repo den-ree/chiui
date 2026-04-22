@@ -12,7 +12,7 @@
 		77BF55082F7D4D2100E1D60D /* Chiui in Frameworks */ = {isa = PBXBuildFile; productRef = 77BF55072F7D4D2100E1D60D /* Chiui */; };
 		77BF550B2F7D4D6400E1D60D /* Chiui in Frameworks */ = {isa = PBXBuildFile; productRef = 77BF550A2F7D4D6400E1D60D /* Chiui */; };
 		77BF550E2F7D4D7200E1D60D /* Chiui in Frameworks */ = {isa = PBXBuildFile; productRef = 77BF550D2F7D4D7200E1D60D /* Chiui */; };
-		77BF55652F8535DA00E1D60D /* Chiui in Frameworks */ = {isa = PBXBuildFile; productRef = 77BF55642F8535DA00E1D60D /* Chiui */; };
+		77F7E7F12F97D8C200256528 /* Chiui in Frameworks */ = {isa = PBXBuildFile; productRef = 77F7E7F02F97D8C200256528 /* Chiui */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -64,7 +64,7 @@
 				77BF55082F7D4D2100E1D60D /* Chiui in Frameworks */,
 				774570BB2DDD0216004AB32E /* Chiui in Frameworks */,
 				77BF54992F7579CE00E1D60D /* Chiui in Frameworks */,
-				77BF55652F8535DA00E1D60D /* Chiui in Frameworks */,
+				77F7E7F12F97D8C200256528 /* Chiui in Frameworks */,
 				77BF550B2F7D4D6400E1D60D /* Chiui in Frameworks */,
 				77BF550E2F7D4D7200E1D60D /* Chiui in Frameworks */,
 			);
@@ -132,7 +132,7 @@
 				77BF55072F7D4D2100E1D60D /* Chiui */,
 				77BF550A2F7D4D6400E1D60D /* Chiui */,
 				77BF550D2F7D4D7200E1D60D /* Chiui */,
-				77BF55642F8535DA00E1D60D /* Chiui */,
+				77F7E7F02F97D8C200256528 /* Chiui */,
 			);
 			productName = DiaryApp;
 			productReference = 774570542DDCFF04004AB32E /* DiaryApp.app */;
@@ -217,7 +217,7 @@
 			mainGroup = 7745704B2DDCFF04004AB32E;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				77BF55632F8535DA00E1D60D /* XCRemoteSwiftPackageReference "chiui" */,
+				77F7E7EF2F97D8C200256528 /* XCLocalSwiftPackageReference "../../../Chiui" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 774570552DDCFF04004AB32E /* Products */;
@@ -622,16 +622,12 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		77BF55632F8535DA00E1D60D /* XCRemoteSwiftPackageReference "chiui" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/den-ree/chiui";
-			requirement = {
-				kind = exactVersion;
-				version = 1.0.1;
-			};
+/* Begin XCLocalSwiftPackageReference section */
+		77F7E7EF2F97D8C200256528 /* XCLocalSwiftPackageReference "../../../Chiui" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../../../Chiui;
 		};
-/* End XCRemoteSwiftPackageReference section */
+/* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		774570BA2DDD0216004AB32E /* Chiui */ = {
@@ -654,9 +650,8 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = Chiui;
 		};
-		77BF55642F8535DA00E1D60D /* Chiui */ = {
+		77F7E7F02F97D8C200256528 /* Chiui */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 77BF55632F8535DA00E1D60D /* XCRemoteSwiftPackageReference "chiui" */;
 			productName = Chiui;
 		};
 /* End XCSwiftPackageProductDependency section */

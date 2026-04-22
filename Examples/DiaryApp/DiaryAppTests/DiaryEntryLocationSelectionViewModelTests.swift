@@ -2,15 +2,15 @@ import XCTest
 @testable import DiaryApp
 @testable import Chiui
 
-final class DiaryEntryMoodSelectionViewModelTests: XCTestCase {
-  var sut: DiaryEntryMoodSelectionViewModel!
+final class DiaryEntryLocationSelectionViewModelTests: XCTestCase {
+  var sut: DiaryEntryLocationSelectionViewModel!
   var context: DiaryContext!
 
   override func setUp() async throws {
     try await super.setUp()
     await MainActor.run {
       context = DiaryContext(initialState: DiaryStoreState())
-      sut = DiaryEntryMoodSelectionViewModel(context)
+      sut = DiaryEntryLocationSelectionViewModel(context)
     }
   }
 
@@ -23,79 +23,80 @@ final class DiaryEntryMoodSelectionViewModelTests: XCTestCase {
   }
 
   @MainActor
-  func testDidStoreUpdateUsesDraftMood() async {
+  func testDidStoreUpdateUsesDraftLocation() async {
     await context.store.update { state in
       state.entrySelectionMode = .addingNew
-      state.entryDraftMood = .great
-      state.isSelectingEntryMood = true
+      state.entryDraftLocation = "Kyoto"
+      state.isSelectingEntryLocation = true
     }
 
     try? await Task.sleep(for: .seconds(0.1))
 
-    XCTAssertEqual(sut.state.selectedMood, .great)
+    XCTAssertEqual(sut.state.location, "Kyoto")
   }
 
   @MainActor
-  func testDidStoreUpdateUsesSelectedEntryMoodWhenNoDraft() async {
+  func testDidStoreUpdateUsesSelectedEntryLocationWhenNoDraft() async {
     let entry = DiaryEntry(
       id: UUID(),
       title: "Title",
       content: "Content",
       createdAt: .now,
-      mood: .bad
+      mood: .bad,
+      location: "Berlin"
     )
 
     await context.store.update { state in
       state.entrySelectionMode = .selecting(entry)
-      state.entryDraftMood = nil
+      state.entryDraftLocation = nil
     }
 
     try? await Task.sleep(for: .seconds(0.1))
 
-    XCTAssertEqual(sut.state.selectedMood, .bad)
+    XCTAssertEqual(sut.state.location, "Berlin")
   }
 
   @MainActor
-  func testUpdateSelectedMoodUpdatesStoreDraft() async {
-    await sut.sendAwaitingEffects(.selectedMoodChanged(.amazing))
+  func testLocationChangedUpdatesStoreDraft() async {
+    await sut.sendAwaitingEffects(.locationChanged("Toronto"))
     try? await Task.sleep(for: .seconds(0.1))
 
-    XCTAssertEqual(sut.state.selectedMood, .amazing)
+    XCTAssertEqual(sut.state.location, "Toronto")
     let storeState = await context.store.state
-    XCTAssertEqual(storeState.entryDraftMood, .amazing)
+    XCTAssertEqual(storeState.entryDraftLocation, "Toronto")
   }
 
   @MainActor
-  func testConfirmSelectionDismissesMoodSelection() async {
+  func testConfirmSelectionDismissesLocationSelection() async {
     await context.store.update { state in
-      state.isSelectingEntryMood = true
+      state.isSelectingEntryLocation = true
     }
 
     await sut.sendAwaitingEffects(.confirmSelection)
     try? await Task.sleep(for: .seconds(0.1))
 
     let storeState = await context.store.state
-    XCTAssertFalse(storeState.isSelectingEntryMood)
+    XCTAssertFalse(storeState.isSelectingEntryLocation)
   }
 
   @MainActor
-  func testCancelSelectionDismissesMoodSelection() async {
+  func testCancelSelectionDismissesLocationSelection() async {
     await context.store.update { state in
-      state.isSelectingEntryMood = true
+      state.isSelectingEntryLocation = true
     }
 
     await sut.sendAwaitingEffects(.cancelSelection)
     try? await Task.sleep(for: .seconds(0.1))
 
     let storeState = await context.store.state
-    XCTAssertFalse(storeState.isSelectingEntryMood)
+    XCTAssertFalse(storeState.isSelectingEntryLocation)
   }
 
   @MainActor
   func testReducerProducesPersistEffect() {
-    var state = DiaryEntryMoodSelectionViewModel.State()
-    let effect = DiaryEntryMoodSelectionViewModel.respond(to: .selectedMoodChanged(.great), state: &state)
-    XCTAssertEqual(state.selectedMood, .great)
-    XCTAssertEqual(effect, .persistDraftMood(.great))
+    var state = DiaryEntryLocationSelectionViewModel.State()
+    let effect = DiaryEntryLocationSelectionViewModel.respond(to: .locationChanged("Oslo"), state: &state)
+    XCTAssertEqual(state.location, "Oslo")
+    XCTAssertEqual(effect, .persistDraftLocation("Oslo"))
   }
 }

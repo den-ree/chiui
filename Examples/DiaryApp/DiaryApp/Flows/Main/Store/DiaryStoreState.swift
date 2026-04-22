@@ -6,8 +6,10 @@ struct DiaryStoreState: ContextualStoreState {
   var entrySelectionMode: EntrySelectionMode = .no
   var entryDraftDate: Date?
   var entryDraftMood: DiaryEntryMood?
+  var entryDraftLocation: String?
   var isSelectingEntryDate: Bool = false
   var isSelectingEntryMood: Bool = false
+  var isSelectingEntryLocation: Bool = false
   var isSavingChanges: Bool = false
 }
 

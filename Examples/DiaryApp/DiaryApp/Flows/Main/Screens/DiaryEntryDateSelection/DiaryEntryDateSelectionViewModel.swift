@@ -1,16 +1,34 @@
 import Foundation
 import Chiui
 
-final class DiaryEntryDateSelectionViewModel: ContextViewModel<DiaryContext, DiaryEntryDateSelectionViewModel.State> {
+final class DiaryEntryDateSelectionViewModel: ContextViewModel<
+  DiaryContext,
+  DiaryEntryDateSelectionViewModel.State,
+  DiaryEntryDateSelectionViewModel.Action,
+  DiaryEntryDateSelectionViewModel.Effect
+> {
   struct State: ContextualViewState {
     var selectedDate: Date = .now
   }
 
-  nonisolated override func didStoreUpdate(_ storeState: DiaryStoreState) async {
-    await updateState { state in
+  enum Action: ContextualAction {
+    case storeChanged(DiaryContext.StoreState)
+    case selectedDateChanged(Date)
+    case confirmSelection
+    case cancelSelection
+  }
+
+  enum Effect: Equatable {
+    case persistDraftDate(Date)
+    case closeDateSelection
+  }
+
+  override class func respond(to action: Action, state: inout State) -> Effect? {
+    switch action {
+    case .storeChanged(let storeState):
       if let draftDate = storeState.entryDraftDate {
         state.selectedDate = draftDate
-        return
+        return nil
       }
 
       switch storeState.entrySelectionMode {
@@ -19,32 +37,27 @@ final class DiaryEntryDateSelectionViewModel: ContextViewModel<DiaryContext, Dia
       case .addingNew, .no:
         state.selectedDate = .now
       }
+      return nil
+
+    case .selectedDateChanged(let date):
+      state.selectedDate = date
+      return .persistDraftDate(date)
+
+    case .confirmSelection, .cancelSelection:
+      return .closeDateSelection
     }
   }
 
-  func updateSelectedDate(_ date: Date) {
-    Task {
-      await updateState { state in
-        state.selectedDate = date
-      }.then { [weak self] change in
-        guard let self, change.hasChanged else { return }
-
-        self.updateStore { storeState in
-          storeState.entryDraftDate = change.newState.selectedDate
-        }
+  override func handle(_ effect: Effect) async {
+    switch effect {
+    case .persistDraftDate(let date):
+      await updateStore { storeState in
+        storeState.entryDraftDate = date
       }
-    }
-  }
-
-  func confirmSelection() {
-    updateStore { storeState in
-      storeState.isSelectingEntryDate = false
-    }
-  }
-
-  func cancelSelection() {
-    updateStore { storeState in
-      storeState.isSelectingEntryDate = false
+    case .closeDateSelection:
+      await updateStore { storeState in
+        storeState.isSelectingEntryDate = false
+      }
     }
   }
 }

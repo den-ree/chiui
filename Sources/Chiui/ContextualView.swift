@@ -13,37 +13,37 @@ import SwiftUI
 /// enabling a clean separation between UI and business logic.
 ///
 /// The view model owns the state (derived from `ContextualStore`) and the view wires SwiftUI
-/// controls to that state via helpers like `bindTo`.
+/// controls to that state via helpers like `bindTo` and `send`.
 ///
 /// ## Overview
 ///
 /// The protocol provides:
 /// - Type-safe view model association
 /// - Automatic state binding
-/// - Two-way binding utilities
+/// - Two-way binding utilities that dispatch actions
 ///
 /// ## Usage
 ///
 /// ```swift
 /// struct UserProfileView: ContextualView {
-///     @StateObject var viewModel: UserProfileViewModel
+///     @State var viewModel: UserProfileViewModel
 ///
 ///     init(_ context: AppContext) {
-///         _viewModel = .init(wrappedValue: .init(context))
+///         _viewModel = .init(initialValue: .init(context))
 ///     }
 ///
 ///     var body: some View {
 ///         Form {
 ///             Section(header: Text("Profile")) {
-///                 TextField("Name", text: bindTo(\.name) { viewModel.updateName($0) })
-///                 TextField("Email", text: bindTo(\.email) { viewModel.updateEmail($0) })
+///                 TextField("Name", text: bindTo(\.name) { .nameChanged($0) })
+///                 TextField("Email", text: bindTo(\.email) { .emailChanged($0) })
 ///             }
 ///
 ///             Section {
 ///                 Button("Save") {
-///                     viewModel.save()
+///                     send(.saveTapped)
 ///                 }
-///                     .disabled(state.isSavingDisabled)
+///                 .disabled(state.isSavingDisabled)
 ///             }
 ///         }
 ///         .navigationTitle(state.title)
@@ -87,7 +87,7 @@ public protocol ContextualView: View {
   var viewModel: ViewModel { get }
 }
 
-public extension ContextualView where ViewModel: ContextViewModel<InjectedStoreContext, ViewState> {
+public extension ContextualView {
   /// Provides access to the view's current state.
   ///
   /// This computed property gives the view read-only access to the state
@@ -104,26 +104,44 @@ public extension ContextualView where ViewModel: ContextViewModel<InjectedStoreC
   /// }
   /// ```
   @MainActor var state: ViewModel.ViewState {
-    viewModel.viewState
+    viewModel.state
   }
 
-  /// Creates a two-way `Binding` to a specific property inside `ViewState`.
+  /// Creates a two-way `Binding` that reads a property from ``state`` and, on writes,
+  /// dispatches an ``ContextualAction`` produced from the new value.
+  ///
+  /// This keeps SwiftUI controls on the Chiui unidirectional path: a write becomes an
+  /// action, the reducer decides the resulting state, and `state` is updated through
+  /// the normal `send` → `respond` flow.
   ///
   /// - Parameters:
   ///   - keyPath: The property in `ViewState` to bind.
-  ///   - onSet: Called whenever SwiftUI writes a new value into the binding.
-  ///            In practice, this usually forwards to a view-model method that mutates
-  ///            state via `updateState(_:)`.
-  /// - Returns: A `Binding` that reads from `state` and forwards updates to `onSet`.
+  ///   - action: Builds the action to dispatch from the new bound value.
+  /// - Returns: A `Binding` that reads from `state` and dispatches `action(newValue)` on write.
+  ///
+  /// ```swift
+  /// TextField("Name", text: bindTo(\.name) { .nameChanged($0) })
+  /// Toggle("Editing", isOn: bindTo(\.isEditing) { .setEditing($0) })
+  /// ```
   @MainActor func bindTo<T>(
     _ keyPath: WritableKeyPath<ViewState, T>,
-    action onSet: @escaping (T) -> Void
+    action: @escaping (T) -> ViewModel.Action
   ) -> Binding<T> {
     Binding(
       get: { state[keyPath: keyPath] },
       set: { newValue in
-        onSet(newValue)
+        viewModel.send(action(newValue))
       }
     )
+  }
+
+  /// Dispatches an action synchronously through ``viewModel``.
+  ///
+  /// When the reducer emits an effect, ``ContextViewModel/handle(_:)`` runs asynchronously.
+  /// Capture the returned task and `await task.value` only when effect completion must finish
+  /// before subsequent work.
+  @MainActor @discardableResult
+  func send(_ action: ViewModel.Action) -> Task<Void, Never>? {
+    viewModel.send(action)
   }
 }

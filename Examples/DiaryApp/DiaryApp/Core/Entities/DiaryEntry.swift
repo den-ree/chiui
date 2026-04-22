@@ -28,33 +28,38 @@ struct DiaryEntry: Identifiable, Equatable, Sendable {
   let content: String
   let createdAt: Date
   let mood: DiaryEntryMood
+  let location: String
 
   init(
     id: UUID,
     title: String,
     content: String,
     createdAt: Date,
-    mood: DiaryEntryMood = .okay
+    mood: DiaryEntryMood = .okay,
+    location: String = ""
   ) {
     self.id = id
     self.title = title
     self.content = content
     self.createdAt = createdAt
     self.mood = mood
+    self.location = location
   }
 
   func new(
     title: String,
     content: String,
     createdAt: Date? = nil,
-    mood: DiaryEntryMood? = nil
+    mood: DiaryEntryMood? = nil,
+    location: String? = nil
   ) -> Self {
     return .init(
       id: id,
       title: title,
       content: content,
       createdAt: createdAt ?? self.createdAt,
-      mood: mood ?? self.mood
+      mood: mood ?? self.mood,
+      location: location ?? self.location
     )
   }
 }

@@ -1,8 +1,8 @@
 import SwiftUI
 import Chiui
 
-struct DiaryEntryDateSelectionView: ContextualView {
-  @State var viewModel: DiaryEntryDateSelectionViewModel
+struct DiaryEntryLocationSelectionView: ContextualView {
+  @State var viewModel: DiaryEntryLocationSelectionViewModel
 
   init(_ context: DiaryContext) {
     _viewModel = .init(initialValue: .init(context))
@@ -10,14 +10,14 @@ struct DiaryEntryDateSelectionView: ContextualView {
 
   var body: some View {
     Form {
-      DatePicker(
-        "Entry Date",
-        selection: bindTo(\.selectedDate) { .selectedDateChanged($0) },
-        displayedComponents: [.date]
+      TextField(
+        "Enter location",
+        text: bindTo(\.location) { .locationChanged($0) }
       )
-      .datePickerStyle(.graphical)
+      .textInputAutocapitalization(.words)
+      .autocorrectionDisabled(false)
     }
-    .navigationTitle("Select Date")
+    .navigationTitle("Select Location")
     .toolbar {
       ToolbarItem(placement: .navigationBarLeading) {
         Button("Cancel") {

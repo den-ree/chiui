@@ -18,11 +18,26 @@ private struct BindingTestContext: StoreContext {
   init() { self.store = ContextualStore(.init()) }
 }
 
+private enum BindingTestAction: Equatable, ContextualAction {
+  case storeChanged(BindingTestStoreState)
+  case titleChanged(String)
+}
+
 @MainActor
-private final class BindingTestViewModel: ContextViewModel<BindingTestContext, BindingTestViewState> {
-  nonisolated override func didStoreUpdate(_ storeState: BindingTestStoreState) async {
-    // Intentionally no-op for this binding test.
-    _ = storeState
+private final class BindingTestViewModel: ContextViewModel<
+  BindingTestContext,
+  BindingTestViewState,
+  BindingTestAction,
+  Never
+> {
+  override class func respond(to action: BindingTestAction, state: inout BindingTestViewState) -> Never? {
+    switch action {
+    case .storeChanged:
+      return nil
+    case .titleChanged(let newTitle):
+      state.title = newTitle
+      return nil
+    }
   }
 }
 
@@ -41,22 +56,18 @@ private struct BindingTestView: ContextualView {
 @MainActor
 @Suite("Chiui ContextualView Binding Tests")
 struct ContextualViewBindingTests {
-  @Test("bindTo reads from ViewState and forwards writes to onSet")
+  @Test("bindTo reads from ViewState and dispatches the mapped action on writes")
   func testBindToGetSetForwarding() async throws {
     let context = BindingTestContext()
     let viewModel = BindingTestViewModel(context)
     let view = BindingTestView(viewModel: viewModel)
 
-    // Initial getter.
     #expect(view.state.title == "")
 
-    let binding = view.bindTo(\.title) { newTitle in
-      _ = viewModel.updateState { $0.title = newTitle }
-    }
+    let binding = view.bindTo(\.title) { .titleChanged($0) }
 
-    // Setter should forward into the provided closure.
     binding.wrappedValue = "Hello"
-    #expect(viewModel.viewState.title == "Hello")
+    #expect(viewModel.state.title == "Hello")
     #expect(binding.wrappedValue == "Hello")
   }
 }

@@ -1,16 +1,34 @@
 import Foundation
 import Chiui
 
-final class DiaryEntryMoodSelectionViewModel: ContextViewModel<DiaryContext, DiaryEntryMoodSelectionViewModel.State> {
+final class DiaryEntryMoodSelectionViewModel: ContextViewModel<
+  DiaryContext,
+  DiaryEntryMoodSelectionViewModel.State,
+  DiaryEntryMoodSelectionViewModel.Action,
+  DiaryEntryMoodSelectionViewModel.Effect
+> {
   struct State: ContextualViewState {
     var selectedMood: DiaryEntryMood = .okay
   }
 
-  nonisolated override func didStoreUpdate(_ storeState: DiaryStoreState) async {
-    await updateState { state in
+  enum Action: Equatable, ContextualAction {
+    case storeChanged(DiaryStoreState)
+    case selectedMoodChanged(DiaryEntryMood)
+    case confirmSelection
+    case cancelSelection
+  }
+
+  enum Effect: Equatable {
+    case persistDraftMood(DiaryEntryMood)
+    case closeMoodSelection
+  }
+
+  override class func respond(to action: Action, state: inout State) -> Effect? {
+    switch action {
+    case .storeChanged(let storeState):
       if let draftMood = storeState.entryDraftMood {
         state.selectedMood = draftMood
-        return
+        return nil
       }
 
       switch storeState.entrySelectionMode {
@@ -19,32 +37,27 @@ final class DiaryEntryMoodSelectionViewModel: ContextViewModel<DiaryContext, Dia
       case .addingNew, .no:
         state.selectedMood = .okay
       }
+      return nil
+
+    case .selectedMoodChanged(let mood):
+      state.selectedMood = mood
+      return .persistDraftMood(mood)
+
+    case .confirmSelection, .cancelSelection:
+      return .closeMoodSelection
     }
   }
 
-  func updateSelectedMood(_ mood: DiaryEntryMood) {
-    Task {
-      await updateState { state in
-        state.selectedMood = mood
-      }.then { [weak self] change in
-        guard let self, change.hasChanged else { return }
-
-        self.updateStore { storeState in
-          storeState.entryDraftMood = change.newState.selectedMood
-        }
+  override func handle(_ effect: Effect) async {
+    switch effect {
+    case .persistDraftMood(let mood):
+      await updateStore { storeState in
+        storeState.entryDraftMood = mood
       }
-    }
-  }
-
-  func confirmSelection() {
-    updateStore { storeState in
-      storeState.isSelectingEntryMood = false
-    }
-  }
-
-  func cancelSelection() {
-    updateStore { storeState in
-      storeState.isSelectingEntryMood = false
+    case .closeMoodSelection:
+      await updateStore { storeState in
+        storeState.isSelectingEntryMood = false
+      }
     }
   }
 }

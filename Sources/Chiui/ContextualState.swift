@@ -168,28 +168,3 @@ public struct ContextualStateChange<State: ContextualState>: Equatable, Sendable
   /// Whether the state actually changed values.
   public var hasChanged: Bool { oldState != newState }
 }
-
-/// A value returned by [`ContextViewModel.updateState(_:)`](ContextViewModel/updateState(_:))
-/// that enables chained, async follow-up work.
-///
-/// Chiui's state updates are unidirectional:
-/// `updateState` computes a `ContextualStateChange`, and `then` lets you run additional async work
-/// on the result (for example: syncing the store, calling services, or performing navigation).
-public struct ContextualStateSideEffect<State: ContextualState>: Sendable {
-  /// The computed state change (old/new/initial/changed).
-  let change: ContextualStateChange<State>
-
-  /// Runs the provided block with the computed `ContextualStateChange`.
-  ///
-  /// - Important: This method executes on the main actor. If you only want to proceed when values
-  ///   actually changed, check `change.hasChanged` inside your block.
-  ///
-  /// - Parameter block: An async closure that receives the computed state change.
-  /// - Returns: `Void`.
-  @MainActor
-  public func then(
-    _ block: @escaping @MainActor (ContextualStateChange<State>) async -> Void
-  ) async {
-    await block(change)
-  }
-}
