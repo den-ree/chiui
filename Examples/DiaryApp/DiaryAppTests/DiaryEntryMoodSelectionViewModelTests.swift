@@ -1,29 +1,21 @@
-import XCTest
+import Foundation
+import Testing
 @testable import DiaryApp
 @testable import Chiui
 
-final class DiaryEntryMoodSelectionViewModelTests: XCTestCase {
-  var sut: DiaryEntryMoodSelectionViewModel!
-  var context: DiaryContext!
-
-  override func setUp() async throws {
-    try await super.setUp()
-    await MainActor.run {
-      context = DiaryContext(initialState: DiaryStoreState())
-      sut = DiaryEntryMoodSelectionViewModel(context)
-    }
-  }
-
-  override func tearDown() async throws {
-    await MainActor.run {
-      sut = nil
-      context = nil
-    }
-    try await super.tearDown()
-  }
-
+@Suite("DiaryEntryMoodSelectionViewModel tests")
+struct DiaryEntryMoodSelectionViewModelTests {
   @MainActor
-  func testDidStoreUpdateUsesDraftMood() async {
+  private func makeSUT() -> (sut: DiaryEntryMoodSelectionViewModel, context: DiaryContext) {
+    let context = DiaryContext(initialState: DiaryStoreState())
+    let sut = DiaryEntryMoodSelectionViewModel(context)
+    return (sut, context)
+  }
+
+  @Test("Store update maps draft mood")
+  @MainActor
+  func didStoreUpdateUsesDraftMood() async {
+    let (sut, context) = makeSUT()
     await context.store.update { state in
       state.entrySelectionMode = .addingNew
       state.entryDraftMood = .great
@@ -32,11 +24,13 @@ final class DiaryEntryMoodSelectionViewModelTests: XCTestCase {
 
     try? await Task.sleep(for: .seconds(0.1))
 
-    XCTAssertEqual(sut.state.selectedMood, .great)
+    #expect(sut.state.selectedMood == .great)
   }
 
+  @Test("Store update maps selected entry mood when draft is missing")
   @MainActor
-  func testDidStoreUpdateUsesSelectedEntryMoodWhenNoDraft() async {
+  func didStoreUpdateUsesSelectedEntryMoodWhenNoDraft() async {
+    let (sut, context) = makeSUT()
     let entry = DiaryEntry(
       id: UUID(),
       title: "Title",
@@ -52,21 +46,25 @@ final class DiaryEntryMoodSelectionViewModelTests: XCTestCase {
 
     try? await Task.sleep(for: .seconds(0.1))
 
-    XCTAssertEqual(sut.state.selectedMood, .bad)
+    #expect(sut.state.selectedMood == .bad)
   }
 
+  @Test("selectedMoodChanged persists draft mood")
   @MainActor
-  func testUpdateSelectedMoodUpdatesStoreDraft() async {
+  func updateSelectedMoodUpdatesStoreDraft() async {
+    let (sut, context) = makeSUT()
     await sut.sendAwaitingEffects(.selectedMoodChanged(.amazing))
     try? await Task.sleep(for: .seconds(0.1))
 
-    XCTAssertEqual(sut.state.selectedMood, .amazing)
+    #expect(sut.state.selectedMood == .amazing)
     let storeState = await context.store.state
-    XCTAssertEqual(storeState.entryDraftMood, .amazing)
+    #expect(storeState.entryDraftMood == .amazing)
   }
 
+  @Test("confirmSelection dismisses mood selection")
   @MainActor
-  func testConfirmSelectionDismissesMoodSelection() async {
+  func confirmSelectionDismissesMoodSelection() async {
+    let (sut, context) = makeSUT()
     await context.store.update { state in
       state.isSelectingEntryMood = true
     }
@@ -75,11 +73,13 @@ final class DiaryEntryMoodSelectionViewModelTests: XCTestCase {
     try? await Task.sleep(for: .seconds(0.1))
 
     let storeState = await context.store.state
-    XCTAssertFalse(storeState.isSelectingEntryMood)
+    #expect(storeState.isSelectingEntryMood == false)
   }
 
+  @Test("cancelSelection dismisses mood selection")
   @MainActor
-  func testCancelSelectionDismissesMoodSelection() async {
+  func cancelSelectionDismissesMoodSelection() async {
+    let (sut, context) = makeSUT()
     await context.store.update { state in
       state.isSelectingEntryMood = true
     }
@@ -88,14 +88,15 @@ final class DiaryEntryMoodSelectionViewModelTests: XCTestCase {
     try? await Task.sleep(for: .seconds(0.1))
 
     let storeState = await context.store.state
-    XCTAssertFalse(storeState.isSelectingEntryMood)
+    #expect(storeState.isSelectingEntryMood == false)
   }
 
+  @Test("Reducer emits persistDraftMood effect")
   @MainActor
-  func testReducerProducesPersistEffect() {
+  func reducerProducesPersistEffect() {
     var state = DiaryEntryMoodSelectionViewModel.State()
     let effect = DiaryEntryMoodSelectionViewModel.respond(to: .selectedMoodChanged(.great), state: &state)
-    XCTAssertEqual(state.selectedMood, .great)
-    XCTAssertEqual(effect, .persistDraftMood(.great))
+    #expect(state.selectedMood == .great)
+    #expect(effect == .persistDraftMood(.great))
   }
 }

@@ -1,29 +1,21 @@
-import XCTest
+import Foundation
+import Testing
 @testable import DiaryApp
 @testable import Chiui
 
-final class DiaryEntryLocationSelectionViewModelTests: XCTestCase {
-  var sut: DiaryEntryLocationSelectionViewModel!
-  var context: DiaryContext!
-
-  override func setUp() async throws {
-    try await super.setUp()
-    await MainActor.run {
-      context = DiaryContext(initialState: DiaryStoreState())
-      sut = DiaryEntryLocationSelectionViewModel(context)
-    }
-  }
-
-  override func tearDown() async throws {
-    await MainActor.run {
-      sut = nil
-      context = nil
-    }
-    try await super.tearDown()
-  }
-
+@Suite("DiaryEntryLocationSelectionViewModel tests")
+struct DiaryEntryLocationSelectionViewModelTests {
   @MainActor
-  func testDidStoreUpdateUsesDraftLocation() async {
+  private func makeSUT() -> (sut: DiaryEntryLocationSelectionViewModel, context: DiaryContext) {
+    let context = DiaryContext(initialState: DiaryStoreState())
+    let sut = DiaryEntryLocationSelectionViewModel(context)
+    return (sut, context)
+  }
+
+  @Test("Store update maps draft location")
+  @MainActor
+  func didStoreUpdateUsesDraftLocation() async {
+    let (sut, context) = makeSUT()
     await context.store.update { state in
       state.entrySelectionMode = .addingNew
       state.entryDraftLocation = "Kyoto"
@@ -32,11 +24,13 @@ final class DiaryEntryLocationSelectionViewModelTests: XCTestCase {
 
     try? await Task.sleep(for: .seconds(0.1))
 
-    XCTAssertEqual(sut.state.location, "Kyoto")
+    #expect(sut.state.location == "Kyoto")
   }
 
+  @Test("Store update maps selected entry location when draft is missing")
   @MainActor
-  func testDidStoreUpdateUsesSelectedEntryLocationWhenNoDraft() async {
+  func didStoreUpdateUsesSelectedEntryLocationWhenNoDraft() async {
+    let (sut, context) = makeSUT()
     let entry = DiaryEntry(
       id: UUID(),
       title: "Title",
@@ -53,21 +47,25 @@ final class DiaryEntryLocationSelectionViewModelTests: XCTestCase {
 
     try? await Task.sleep(for: .seconds(0.1))
 
-    XCTAssertEqual(sut.state.location, "Berlin")
+    #expect(sut.state.location == "Berlin")
   }
 
+  @Test("locationChanged persists draft location")
   @MainActor
-  func testLocationChangedUpdatesStoreDraft() async {
+  func locationChangedUpdatesStoreDraft() async {
+    let (sut, context) = makeSUT()
     await sut.sendAwaitingEffects(.locationChanged("Toronto"))
     try? await Task.sleep(for: .seconds(0.1))
 
-    XCTAssertEqual(sut.state.location, "Toronto")
+    #expect(sut.state.location == "Toronto")
     let storeState = await context.store.state
-    XCTAssertEqual(storeState.entryDraftLocation, "Toronto")
+    #expect(storeState.entryDraftLocation == "Toronto")
   }
 
+  @Test("confirmSelection dismisses location selection")
   @MainActor
-  func testConfirmSelectionDismissesLocationSelection() async {
+  func confirmSelectionDismissesLocationSelection() async {
+    let (sut, context) = makeSUT()
     await context.store.update { state in
       state.isSelectingEntryLocation = true
     }
@@ -76,11 +74,13 @@ final class DiaryEntryLocationSelectionViewModelTests: XCTestCase {
     try? await Task.sleep(for: .seconds(0.1))
 
     let storeState = await context.store.state
-    XCTAssertFalse(storeState.isSelectingEntryLocation)
+    #expect(storeState.isSelectingEntryLocation == false)
   }
 
+  @Test("cancelSelection dismisses location selection")
   @MainActor
-  func testCancelSelectionDismissesLocationSelection() async {
+  func cancelSelectionDismissesLocationSelection() async {
+    let (sut, context) = makeSUT()
     await context.store.update { state in
       state.isSelectingEntryLocation = true
     }
@@ -89,14 +89,15 @@ final class DiaryEntryLocationSelectionViewModelTests: XCTestCase {
     try? await Task.sleep(for: .seconds(0.1))
 
     let storeState = await context.store.state
-    XCTAssertFalse(storeState.isSelectingEntryLocation)
+    #expect(storeState.isSelectingEntryLocation == false)
   }
 
+  @Test("Reducer emits persistDraftLocation effect")
   @MainActor
-  func testReducerProducesPersistEffect() {
+  func reducerProducesPersistEffect() {
     var state = DiaryEntryLocationSelectionViewModel.State()
     let effect = DiaryEntryLocationSelectionViewModel.respond(to: .locationChanged("Oslo"), state: &state)
-    XCTAssertEqual(state.location, "Oslo")
-    XCTAssertEqual(effect, .persistDraftLocation("Oslo"))
+    #expect(state.location == "Oslo")
+    #expect(effect == .persistDraftLocation("Oslo"))
   }
 }
