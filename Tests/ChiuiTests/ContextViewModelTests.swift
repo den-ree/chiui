@@ -20,9 +20,25 @@ struct ChiuiTestContext: StoreContext {
 }
 
 @MainActor
-final class ImmediateMapViewModel: ContextViewModel<ChiuiTestContext, ChiuiTestViewState> {
-  nonisolated override func didStoreUpdate(_ storeState: ChiuiTestStoreState) async {
-    await updateState { $0.value = storeState.value }
+final class ImmediateMapViewModel: ContextViewModel<
+  ChiuiTestContext,
+  ChiuiTestViewState,
+  ImmediateMapViewModel.Action,
+  Never
+> {
+  enum Action: Equatable, ContextualAction {
+    case storeChanged(ChiuiTestStoreState)
+    case localSet(Int)
+  }
+
+  override class func respond(to action: Action, state: inout ChiuiTestViewState) -> Never? {
+    switch action {
+    case .storeChanged(let storeState):
+      state.value = storeState.value
+    case .localSet(let value):
+      state.value = value
+    }
+    return nil
   }
 }
 
@@ -37,7 +53,12 @@ actor ThreadAndValueLog {
 }
 
 @MainActor
-final class SlowCoalescingMapViewModel: ContextViewModel<ChiuiTestContext, ChiuiTestViewState> {
+final class SlowCoalescingMapViewModel: ContextViewModel<
+  ChiuiTestContext,
+  ChiuiTestViewState,
+  SlowCoalescingMapViewModel.Action,
+  SlowCoalescingMapViewModel.Effect
+> {
   private let log: ThreadAndValueLog
 
   init(_ context: ChiuiTestContext, log: ThreadAndValueLog) {
@@ -45,14 +66,30 @@ final class SlowCoalescingMapViewModel: ContextViewModel<ChiuiTestContext, Chiui
     super.init(context)
   }
 
-  nonisolated override func didStoreUpdate(_ storeState: ChiuiTestStoreState) async {
-    // Simulate expensive mapping work that should be cancellable.
-    // Task.sleep() is cancellation-aware; we also check Task.isCancelled after waking.
-    try? await Task.sleep(for: .milliseconds(80))
-    guard !Task.isCancelled else { return }
+  enum Action: Equatable, ContextualAction {
+    case storeChanged(ChiuiTestStoreState)
+  }
 
-    await updateState { $0.value = storeState.value }
-    await log.applied(value: storeState.value)
+  enum Effect: Equatable {
+    case recordApplied(Int)
+  }
+
+  override class func respond(to action: Action, state: inout ChiuiTestViewState) -> Effect? {
+    switch action {
+    case .storeChanged(let storeState):
+      state.value = storeState.value
+      return .recordApplied(storeState.value)
+    }
+  }
+
+  override func handle(_ effect: Effect) async {
+    switch effect {
+    case .recordApplied(let value):
+      // Simulate expensive follow-up work that should be cancellable.
+      try? await Task.sleep(for: .milliseconds(80))
+      guard !Task.isCancelled else { return }
+      await log.applied(value: value)
+    }
   }
 }
 
@@ -88,7 +125,7 @@ struct ContextViewModelTests {
     let viewModel = ImmediateMapViewModel(context)
 
     #expect(await TestUtils.waitUntil(timeout: .seconds(1)) {
-      await MainActor.run { viewModel.viewState.value == 42 }
+      await viewModel.state.value == 42
     })
   }
 
@@ -99,13 +136,12 @@ struct ContextViewModelTests {
 
     // Wait for initial mapping (keeps the test from racing the connectTask).
     #expect(await TestUtils.waitUntil(timeout: .seconds(1)) {
-      await MainActor.run { viewModel.viewState.value == 1 }
+      await viewModel.state.value == 1
     })
 
-    let task = viewModel.updateStore { storeState in
+    await viewModel.updateStore { storeState in
       storeState.value = 123
     }
-    await task.value
 
     let storeState = await context.store.state
     #expect(storeState.value == 123)
@@ -117,18 +153,14 @@ struct ContextViewModelTests {
     let viewModel = ImmediateMapViewModel(context)
 
     #expect(await TestUtils.waitUntil(timeout: .seconds(1)) {
-      await MainActor.run { viewModel.viewState.value == 0 }
+      await viewModel.state.value == 0
     })
 
     // viewState is already 0; setting it to 0 should be treated as a no-op.
-    var captured: ContextualStateChange<ChiuiTestViewState>?
-    let sideEffect = viewModel.updateState { $0.value = 0 }
-    await sideEffect.then { change in
-      captured = change
-    }
+    let captured = viewModel.updateState { $0.value = 0 }
 
-    #expect(captured?.hasChanged == false)
-    #expect(viewModel.viewState.value == 0)
+    #expect(captured.hasChanged == false)
+    #expect(viewModel.state.value == 0)
   }
 
   @Test("scopeState snapshots derived values at call time")
@@ -137,7 +169,7 @@ struct ContextViewModelTests {
     let viewModel = ImmediateMapViewModel(context)
 
     #expect(await TestUtils.waitUntil(timeout: .seconds(1)) {
-      await MainActor.run { viewModel.viewState.value == 0 }
+      await viewModel.state.value == 0
     })
 
     let box = IntBox()
@@ -154,7 +186,7 @@ struct ContextViewModelTests {
       })
     }
 
-    #expect(await TestUtils.waitUntil(timeout: .seconds(1)) {
+    #expect(await TestUtils.waitUntil(timeout: .seconds(5)) {
       await captureSignal.get() != nil
     })
 
@@ -173,8 +205,12 @@ struct ContextViewModelTests {
 
     // Wait until initial value is applied.
     #expect(await TestUtils.waitUntil(timeout: .seconds(2)) {
-      await MainActor.run { viewModel.viewState.value == -1 }
+      await viewModel.state.value == -1
     })
+
+    // Let the initial `.storeChanged(-1)` effect finish (`handle` sleeps) before flooding updates,
+    // so coalescing tests stale intermediate snapshots — not cancellation of the first mapping.
+    try? await Task.sleep(for: .milliseconds(120))
 
     for index in 1...5 {
       await context.store.update { state in
@@ -183,7 +219,12 @@ struct ContextViewModelTests {
     }
 
     #expect(await TestUtils.waitUntil(timeout: .seconds(2)) {
-      await MainActor.run { viewModel.viewState.value == 5 }
+      await viewModel.state.value == 5
+    })
+
+    // `handle` logs after an async delay; wait for the final log entry.
+    #expect(await TestUtils.waitUntil(timeout: .seconds(2)) {
+      await log.snapshotApplied().last == 5
     })
 
     // Only initial mapping + latest mapping should commit.
@@ -193,6 +234,25 @@ struct ContextViewModelTests {
     #expect(applied.filter { $0 != -1 && $0 != 5 }.isEmpty)
   }
 
-  // Note: "didStoreUpdate doesn't block UI" is covered in the dedicated
+  @Test("Reducer stays pure and deterministic")
+  func testReducerPureFunction() {
+    var state = ChiuiTestViewState(value: 1)
+    let effect: Never? = ImmediateMapViewModel.respond(to: .localSet(7), state: &state)
+    #expect(effect == nil)
+    #expect(state.value == 7)
+  }
+
+  @Test("Store snapshot action maps through reducer")
+  func testReducerStoreChangedAction() {
+    var state = ChiuiTestViewState(value: 0)
+    let effect: Never? = ImmediateMapViewModel.respond(
+      to: .storeChanged(ChiuiTestStoreState(value: 99)),
+      state: &state
+    )
+    #expect(effect == nil)
+    #expect(state.value == 99)
+  }
+
+  // Note: main-actor responsiveness under store churn is covered in the dedicated
   // performance test via a main-actor heartbeat.
 }

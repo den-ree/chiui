@@ -6,7 +6,7 @@ private struct TestState: ContextualState {
   var value: Int
 }
 
-@Suite("Chiui ContextualStateChange & SideEffect Tests")
+@Suite("Chiui ContextualStateChange Tests")
 struct ContextualStateChangeTests {
   @Test("ContextualStateChange hasChanged detects equality")
   func testHasChanged() {
@@ -29,24 +29,16 @@ struct ContextualStateChangeTests {
     #expect(change.isInitial == true)
   }
 
-  @Test("ContextualStateSideEffect.then delivers the computed change")
-  func testSideEffectThenReceivesChange() async throws {
+  @Test("ContextualStateChange carries old/new values")
+  func testChangeCarriesStateValues() {
     let change = ContextualStateChange<TestState>(
       oldState: TestState(value: 10),
       newState: TestState(value: 20),
       isInitial: false
     )
-
-    let sideEffect = ContextualStateSideEffect<TestState>(change: change)
-
-    var received: ContextualStateChange<TestState>?
-    await sideEffect.then { computed in
-      received = computed
-      #expect(computed.hasChanged == true)
-      #expect(computed.oldState.value == 10)
-      #expect(computed.newState.value == 20)
-    }
-
-    #expect(received?.isInitial == false)
+    #expect(change.hasChanged == true)
+    #expect(change.oldState.value == 10)
+    #expect(change.newState.value == 20)
+    #expect(change.isInitial == false)
   }
 }
