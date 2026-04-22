@@ -1,29 +1,21 @@
-import XCTest
+import Foundation
+import Testing
 @testable import DiaryApp
 @testable import Chiui
 
-final class DiaryEntryDateSelectionViewModelTests: XCTestCase {
-  var sut: DiaryEntryDateSelectionViewModel!
-  var context: DiaryContext!
-
-  override func setUp() async throws {
-    try await super.setUp()
-    await MainActor.run {
-      context = DiaryContext(initialState: DiaryStoreState())
-      sut = DiaryEntryDateSelectionViewModel(context)
-    }
-  }
-
-  override func tearDown() async throws {
-    await MainActor.run {
-      sut = nil
-      context = nil
-    }
-    try await super.tearDown()
-  }
-
+@Suite("DiaryEntryDateSelectionViewModel tests")
+struct DiaryEntryDateSelectionViewModelTests {
   @MainActor
-  func testDidStoreUpdateUsesDraftDate() async {
+  private func makeSUT() -> (sut: DiaryEntryDateSelectionViewModel, context: DiaryContext) {
+    let context = DiaryContext(initialState: DiaryStoreState())
+    let sut = DiaryEntryDateSelectionViewModel(context)
+    return (sut, context)
+  }
+
+  @Test("Store update maps draft date")
+  @MainActor
+  func didStoreUpdateUsesDraftDate() async {
+    let (sut, context) = makeSUT()
     let draftDate = Date(timeIntervalSince1970: 1_750_000_000)
 
     await context.store.update { state in
@@ -34,23 +26,27 @@ final class DiaryEntryDateSelectionViewModelTests: XCTestCase {
 
     try? await Task.sleep(for: .seconds(0.1))
 
-    XCTAssertEqual(sut.state.selectedDate, draftDate)
+    #expect(sut.state.selectedDate == draftDate)
   }
 
+  @Test("selectedDateChanged persists draft date")
   @MainActor
-  func testUpdateSelectedDateUpdatesStoreDraft() async {
+  func updateSelectedDateUpdatesStoreDraft() async {
+    let (sut, context) = makeSUT()
     let selectedDate = Date(timeIntervalSince1970: 1_760_000_000)
 
     await sut.sendAwaitingEffects(.selectedDateChanged(selectedDate))
     try? await Task.sleep(for: .seconds(0.1))
 
-    XCTAssertEqual(sut.state.selectedDate, selectedDate)
+    #expect(sut.state.selectedDate == selectedDate)
     let storeState = await context.store.state
-    XCTAssertEqual(storeState.entryDraftDate, selectedDate)
+    #expect(storeState.entryDraftDate == selectedDate)
   }
 
+  @Test("confirmSelection dismisses date selection")
   @MainActor
-  func testConfirmSelectionDismissesDateSelection() async {
+  func confirmSelectionDismissesDateSelection() async {
+    let (sut, context) = makeSUT()
     await context.store.update { state in
       state.isSelectingEntryDate = true
     }
@@ -59,11 +55,13 @@ final class DiaryEntryDateSelectionViewModelTests: XCTestCase {
     try? await Task.sleep(for: .seconds(0.1))
 
     let storeState = await context.store.state
-    XCTAssertFalse(storeState.isSelectingEntryDate)
+    #expect(storeState.isSelectingEntryDate == false)
   }
 
+  @Test("cancelSelection dismisses date selection")
   @MainActor
-  func testCancelSelectionDismissesDateSelection() async {
+  func cancelSelectionDismissesDateSelection() async {
+    let (sut, context) = makeSUT()
     await context.store.update { state in
       state.isSelectingEntryDate = true
     }
@@ -72,15 +70,16 @@ final class DiaryEntryDateSelectionViewModelTests: XCTestCase {
     try? await Task.sleep(for: .seconds(0.1))
 
     let storeState = await context.store.state
-    XCTAssertFalse(storeState.isSelectingEntryDate)
+    #expect(storeState.isSelectingEntryDate == false)
   }
 
+  @Test("Reducer emits persistDraftDate effect")
   @MainActor
-  func testReducerProducesPersistEffect() {
+  func reducerProducesPersistEffect() {
     var state = DiaryEntryDateSelectionViewModel.State()
     let date = Date(timeIntervalSince1970: 1_760_000_000)
     let effect = DiaryEntryDateSelectionViewModel.respond(to: .selectedDateChanged(date), state: &state)
-    XCTAssertEqual(state.selectedDate, date)
-    XCTAssertEqual(effect, .persistDraftDate(date))
+    #expect(state.selectedDate == date)
+    #expect(effect == .persistDraftDate(date))
   }
 }

@@ -124,6 +124,41 @@ struct EntryView: ContextualView {
 }
 ```
 
+### 4. Unit tests
+
+```swift
+import Testing
+@testable import App
+
+@Suite("EntryViewModel tests")
+struct EntryViewModelTests {
+    @Test("Reducer: titleChanged updates state and emits effect")
+    func reducer_titleChanged_updatesState_andEmitsEffect() {
+        var state = EntryState()
+        let effect = EntryViewModel.respond(to: .titleChanged("Hello"), state: &state)
+
+        #expect(state.title == "Hello")
+        #expect(effect == .persistTitle("Hello"))
+    }
+
+    @Test("send(saveTapped) runs effect and updates store")
+    @MainActor
+    func send_saveTapped_runsEffectAndUpdatesStore() async {
+        let context = EntryContext(initialState: .init(), api: .mockSuccess)
+        let sut = EntryViewModel(context)
+
+        _ = sut.send(.titleChanged("New entry"))
+        if let task = sut.send(.saveTapped) {
+            await task.value
+        }
+
+        let store = await context.store.state
+        #expect(store.entries.last?.title == "New entry")
+        #expect(sut.state.isSaving == false)
+    }
+}
+```
+
 ## Rules
 
 1. **`respond` is pure.** It's a `class func` with no `self`. It cannot touch the store, coordinator, or any service.
