@@ -20,6 +20,6 @@ swiftlint lint --strict
 - Keep architecture aligned with `AGENTS.md` conventions.
 
 ## Commit and Review Notes
-- Use clear commit messages describing intent.
+- Use clear commit messages describing action.
 - Ensure CI is green before requesting review.
 - Reference issues or context in PR descriptions when relevant.

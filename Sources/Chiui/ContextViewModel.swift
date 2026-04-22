@@ -5,25 +5,53 @@
 //  Created by Den Ree on 04/04/2025.
 //
 
+import Observation
 @preconcurrency import Combine
 
 /// A protocol that defines the basic requirements for a view model in Chiui.
 ///
 /// `ContextualViewModel` serves as the foundation for view models, requiring them to:
-/// - Be observable objects for SwiftUI integration
+/// - Integrate with SwiftUI via ``ContextViewModel`` and `@Observable`
 /// - Define their store context type
 /// - Define their view state type
+/// - Define an ``ContextualAction`` type that can represent store-driven updates
 ///
 /// ## Overview
 ///
 /// This protocol is the base requirement for all view models in the Chiui framework.
 /// It ensures that view models can properly integrate with the store and handle state updates.
-public protocol ContextualViewModel: ObservableObject {
+@MainActor
+public protocol ContextualViewModel {
   /// The type of context that provides access to the store.
   associatedtype InjectedStoreContext: StoreContext
 
   /// The type of state used by this view model.
   associatedtype ViewState: ContextualViewState
+
+  /// The type of action used to drive state transitions.
+  associatedtype Action: ContextualAction
+
+  /// The type of side effect produced by the reducer.
+  associatedtype Effect
+
+  /// Read-only state exposed to views.
+  var state: ViewState { get }
+
+  @discardableResult
+  func send(_ action: Action) -> Task<(), Never>?
+}
+
+/// Marker protocol for action enums that participate in store-driven updates.
+///
+/// Declare `case storeChanged(YourStoreState)` on your action enum. The framework calls
+/// ``Action/storeChanged(_:)`` (the synthesized enum case constructor) from the store
+/// subscription, then ``respond(to:state:)`` handles `.storeChanged` like any other action.
+///
+/// Do not add a manual `static func storeChanged` — it conflicts with the `case storeChanged` name.
+public protocol ContextualAction: Equatable, Sendable {
+  associatedtype StoreState: ContextualStoreState
+
+  static func storeChanged(_ state: StoreState) -> Self
 }
 
 /// A base view model class that integrates with a store and manages state.
@@ -32,10 +60,10 @@ public protocol ContextualViewModel: ObservableObject {
 /// management in SwiftUI.
 ///
 /// It implements:
-/// - Unidirectional data flow from store state to view state
+/// - Unidirectional data flow from store state to view state (via ``Action/storeChanged(_:)`` → ``send(_:)`` → ``respond(to:state:)``)
 /// - Reactive updates when store state changes
 /// - Lifecycle management of subscriptions
-/// - Fluent local state update API with async chaining
+/// - Local state mutation via ``updateState(_:)``
 ///
 /// ## Overview
 ///
@@ -48,25 +76,19 @@ public protocol ContextualViewModel: ObservableObject {
 /// ## Usage
 ///
 /// ```swift
-/// final class UserProfileViewModel: ContextViewModel<AppContext, UserProfileViewState> {
-///     nonisolated override func didStoreUpdate(_ storeState: AppContext.StoreState) async {
-///         await updateState { state in
-///             state.name = storeState.userProfile.name
-///             state.isSavingDisabled = storeState.userProfile.name.isEmpty
-///         }
-///     }
+/// enum Action: ContextualAction {
+///     case storeChanged(AppStoreState)
+///     case nameChanged(String)
+/// }
 ///
-///     func updateName(_ name: String) {
-///         Task { @MainActor in
-///             await updateState { state in
-///                 state.name = name
-///             }.then { [weak self] change in
-///                 guard let self else { return }
-///                 self.updateStore { storeState in
-///                     storeState.userProfile.name = change.newState.name
-///                 }
-///             }
-///         }
+/// override class func respond(to action: Action, state: inout ProfileState) -> Effect? {
+///     switch action {
+///     case .storeChanged(let store):
+///         state.displayName = store.user?.name ?? ""
+///         return nil
+///     case .nameChanged(let name):
+///         state.displayName = name
+///         return .persist(name)
 ///     }
 /// }
 /// ```
@@ -78,11 +100,13 @@ public protocol ContextualViewModel: ObservableObject {
 /// - ``StoreContext``
 /// - ``ViewState``
 /// - ``context``
-/// - ``viewState``
+/// - ``state``
 ///
 /// ### State Management
 ///
-/// - ``didStoreUpdate(_:)``
+/// - ``ContextualAction``
+/// - ``send(_:)``
+/// - ``respond(to:state:)``
 /// - ``updateState(_:)``
 /// - ``updateStore(_:)``
 ///
@@ -91,39 +115,54 @@ public protocol ContextualViewModel: ObservableObject {
 /// - ``StoreContext``
 /// - ``ContextualViewState``
 /// - ``ContextualStateChange``
-/// - ``ContextualStateSideEffect``
+/// - ``ContextualStateChange``
 @MainActor
-open class ContextViewModel<InjectedStoreContext: StoreContext, ViewState: ContextualViewState>: ContextualViewModel {
-  /// The current view state
-  public var state: ViewState { viewState }
-
+@Observable
+open class ContextViewModel<
+  InjectedStoreContext: StoreContext,
+  ViewState: ContextualViewState,
+  Action: ContextualAction,
+  Effect
+>: ContextualViewModel where Action.StoreState == InjectedStoreContext.StoreState {
   /// The store context used by this view model
+  @ObservationIgnored
   public let context: InjectedStoreContext
 
   /// Set of cancellables to manage subscriptions
+  @ObservationIgnored
   private var cancellables = Set<AnyCancellable>()
 
-  private var storeUpdateTask: Task<Void, Never>?
-  private var connectTask: Task<Void, Never>?
+  @ObservationIgnored
+  nonisolated(unsafe) private var storeUpdateTask: Task<Void, Never>?
+  @ObservationIgnored
+  nonisolated(unsafe) private var connectTask: Task<Void, Never>?
 
+  @ObservationIgnored
   private var hasInitialState: Bool = true
 
-  /// The current read-only state derived from the store state, specifically scoped for the view
-  @Published fileprivate(set) var viewState: ViewState
+  /// The only observable property. SwiftUI re-renders only when `body` reads
+  /// a value from `state` and that value changes.
+  public fileprivate(set) var state: ViewState
 
   /// Creates a new view model instance with the given store context
   /// - Parameter context: The store context to use for state management
   public init(_ context: InjectedStoreContext) {
     self.context = context
-    self.viewState = .init()
+    self.state = .init()
 
     connectTask = Task { [weak self] in
       let subscription = await context.store.subscribe { [weak self] _, new in
-        Task { @MainActor [weak self] in
-          self?.storeUpdateTask?.cancel()
-          self?.storeUpdateTask = Task { [weak self] in
-            guard let self else { return }
-            await self.didStoreUpdate(new)
+        self?.storeUpdateTask?.cancel()
+        self?.storeUpdateTask = Task { @MainActor [weak self] in
+          guard let self else { return }
+          guard !Task.isCancelled else { return }
+          let effectTask = self.send(.storeChanged(new))
+          if let effectTask {
+            await withTaskCancellationHandler {
+              await effectTask.value
+            } onCancel: {
+              effectTask.cancel()
+            }
           }
         }
       }
@@ -136,74 +175,82 @@ open class ContextViewModel<InjectedStoreContext: StoreContext, ViewState: Conte
     storeUpdateTask?.cancel()
   }
 
-  /// Called when the store state has been updated
+  /// Sends an action into the view model state machine.
   ///
-  /// This is the core mapping function that defines how the view state is derived from the store state.
-  /// It should be pure and deterministic - the same store state should always produce the same view state.
+  /// The reducer (`respond`) mutates local view state synchronously and may emit an effect.
+  /// If an effect is produced, ``handle(_:)`` runs asynchronously and this method returns the task
+  /// that runs it. Otherwise returns `nil`. Callers should `await task.value` only when they need
+  /// deterministic completion after effect work (tests, sequencing).
   ///
-  /// ## Overview
-  ///
-  /// This method is called whenever the store state changes and should:
-  /// - Map relevant store state to view state using `updateState`
-  /// - Handle any derived state calculations
-  /// - Maintain UI-specific state
-  ///
-  /// ## Usage
-  ///
-  /// ```swift
-  /// nonisolated override func didStoreUpdate(_ storeState: AppContext.StoreState) async {
-  ///     await updateState { state in
-  ///         state.name = storeState.userProfile.name
-  ///         state.isSavingDisabled = storeState.userProfile.name.isEmpty
-  ///     }
-  /// }
-  /// ```
-  ///
-  /// - Parameter storeState: The current store state
-  nonisolated open func didStoreUpdate(
-    _ storeState: InjectedStoreContext.StoreState
-  ) async {
-    // Default implementation does nothing
+  /// - Parameter action: The action to process.
+  /// - Returns: A task representing async effect handling, or `nil` when no effect was emitted.
+  @discardableResult
+  public func send(_ action: Action) -> Task<(), Never>? {
+    var effect: Effect?
+    _ = updateState { state in
+      effect = Self.respond(to: action, state: &state)
+    }
+
+    if let effect {
+      let task = Task {
+        await handle(effect)
+      }
+
+      return task
+    }
+
+    return nil
   }
+
+  /// Pure reducer for handling actions and mutating view state.
+  ///
+  /// - Parameters:
+  ///   - action: The incoming action.
+  ///   - state: Mutable view state.
+  /// - Returns: Optional effect to run after state update.
+  open class func respond(to action: Action, state: inout ViewState) -> Effect? {
+    nil
+  }
+
+  /// Runs asynchronous side effects emitted by `respond(to:state:)`.
+  ///
+  /// Override in subclasses to perform async follow-up work such as store updates,
+  /// network calls, analytics, or navigation.
+  ///
+  /// - Parameter effect: Effect emitted by the reducer.
+  open func handle(_ effect: Effect) async {}
 
   /// Updates the global store's state using a mutation block
   ///
   /// - Parameter block: A closure that modifies the store's state
   ///
-  /// - Returns: A task that completes when the store update has been applied.
-  @discardableResult
   public func updateStore(
     _ block: @escaping @Sendable (inout InjectedStoreContext.StoreState) -> Void
-  ) -> Task<Void, Never> {
-    Task {
-      await context.store.update(state: block)
-    }
+  ) async {
+    await context.store.update(state: block)
   }
 
-  @discardableResult
   /// Mutates the view's local state by computing a `ContextualStateChange`.
   ///
   /// This method is unidirectional: it computes `oldState`/`newState`, updates `state` only when
-  /// values actually changed, and returns a side-effect handle you can chain with `then(_:)`.
-  ///
-  /// - Important: You can check `change.hasChanged` inside the `then` block to avoid performing
-  ///   work when the mutation does not actually change values.
+  /// values actually changed, and returns mutation metadata for optional follow-up decisions.
   ///
   /// - Parameter block: A closure that mutates a copy of the current `ViewState`.
-  /// - Returns: A `ContextualStateSideEffect` that carries the computed state change.
-  public func updateState(_ block: (inout ViewState) -> Void) -> ContextualStateSideEffect<ViewState> {
-    let oldState = viewState
-    var newState = viewState
+  /// - Returns: A `ContextualStateChange` describing the state transition.
+  @discardableResult
+  public func updateState(_ block: (inout ViewState) -> Void) -> ContextualStateChange<ViewState> {
+    let oldState = state
+    var newState = state
     block(&newState)
 
     let change = ContextualStateChange(oldState: oldState, newState: newState, isInitial: hasInitialState)
 
     if change.hasChanged {
-      viewState = change.newState
+      state = change.newState
       hasInitialState = false
     }
 
-    return .init(change: change)
+    return change
   }
 
   /// Reads a scoped value from the current view state and performs async work with it.
@@ -216,7 +263,7 @@ open class ContextViewModel<InjectedStoreContext: StoreContext, ViewState: Conte
   ///   - block: Async closure executed with the scoped value.
   /// - Returns: `Void`.
   public func scopeState<T>(_ scopeBlock: @escaping (ViewState) -> T, _ block: @escaping (T) async -> Void) async {
-    await block(scopeBlock(viewState))
+    await block(scopeBlock(state))
   }
 
   /// Subscribes to a cancellable and stores it for lifecycle management
